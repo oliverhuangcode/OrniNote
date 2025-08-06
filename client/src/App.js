@@ -1,23 +1,29 @@
-import logo from './logo.svg';
+import React from 'react';
+import LoginPage from './pages/LoginPage/LoginPage';
+import ProjectsPage from './pages/ProjectsPage/ProjectsPage';
+import AnnotationPage from './pages/AnnotationPage/AnnotationPage';
 import './App.css';
 
 function App() {
+  // CHANGE THIS LINE TO TEST DIFFERENT PAGES
+  const currentPage = 'annotation'; // Change to: 'login', 'projects', 'annotation'
+  
+  const renderPage = () => {
+    switch(currentPage) {
+      case 'login':
+        return <LoginPage />;
+      case 'projects':
+        return <ProjectsPage />;
+      case 'annotation':
+        return <AnnotationPage />;
+      default:
+        return <ProjectsPage />;
+    }
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {renderPage()}
     </div>
   );
 }
