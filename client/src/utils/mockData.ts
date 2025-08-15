@@ -1,7 +1,6 @@
-// src/utils/mockData.js
+import { User, Team, Project, Image, Label, Annotation, TeamMember, ProjectShare } from './types';
 
-// Users
-export const MOCK_USERS = [
+export const MOCK_USERS: User[] = [
   {
     id: 1,
     username: "john_doe",
@@ -14,8 +13,7 @@ export const MOCK_USERS = [
   }
 ];
 
-// Teams
-export const MOCK_TEAMS = [
+export const MOCK_TEAMS: Team[] = [
   {
     id: 1,
     ownerId: 1,
@@ -28,8 +26,7 @@ export const MOCK_TEAMS = [
   }
 ];
 
-// Projects
-export const MOCK_PROJECTS = [
+export const MOCK_PROJECTS: Project[] = [
   {
     id: 1,
     ownerId: 1,
@@ -50,8 +47,7 @@ export const MOCK_PROJECTS = [
   }
 ];
 
-// Images
-export const MOCK_IMAGES = [
+export const MOCK_IMAGES: Image[] = [
   {
     id: 1,
     projectId: 1,
@@ -78,8 +74,7 @@ export const MOCK_IMAGES = [
   }
 ];
 
-// Labels
-export const MOCK_LABELS = [
+export const MOCK_LABELS: Label[] = [
   {
     id: 1,
     projectId: 1,
@@ -106,8 +101,7 @@ export const MOCK_LABELS = [
   }
 ];
 
-// Annotations
-export const MOCK_ANNOTATIONS = [
+export const MOCK_ANNOTATIONS: Annotation[] = [
   {
     id: 1,
     imageId: 1,
@@ -131,58 +125,18 @@ export const MOCK_ANNOTATIONS = [
   }
 ];
 
-// Team Members
-export const MOCK_TEAM_MEMBERS = [
-  {
-    teamId: 1,
-    userId: 1,
-    role: "owner"
-  },
-  {
-    teamId: 1,
-    userId: 2,
-    role: "member"
-  }
-];
-
-// Project Shares
-export const MOCK_PROJECT_SHARES = [
-  {
-    projectId: 1,
-    teamId: 1,
-    permission: "edit"
-  },
-  {
-    projectId: 2,
-    teamId: 1,
-    permission: "view"
-  }
-];
-
-// Helper functions to get related data
-export const getProjectsByUser = (userId) => {
+// Helper functions
+export const getProjectsByUser = (userId: number): Project[] => {
   return MOCK_PROJECTS.filter(project => project.ownerId === userId);
 };
 
-export const getImagesByProject = (projectId) => {
+export const getImagesByProject = (projectId: number): Image[] => {
   return MOCK_IMAGES.filter(image => image.projectId === projectId);
 };
 
-export const getLabelsByProject = (projectId) => {
+export const getLabelsByProject = (projectId: number): Label[] => {
   return MOCK_LABELS.filter(label => label.projectId === projectId);
 };
 
-export const getAnnotationsByImage = (imageId) => {
-  return MOCK_ANNOTATIONS.filter(annotation => annotation.imageId === imageId);
-};
-
-export const getUserById = (userId) => {
-  return MOCK_USERS.find(user => user.id === userId);
-};
-
-export const getProjectById = (projectId) => {
-  return MOCK_PROJECTS.find(project => project.id === projectId);
-};
-
 // Current user (for testing)
-export const CURRENT_USER = MOCK_USERS[0]; // john_doe
+export const CURRENT_USER: User = MOCK_USERS[0];
