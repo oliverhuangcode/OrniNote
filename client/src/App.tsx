@@ -1,30 +1,31 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LoginPage from './pages/LoginPage/LoginPage';
-import ProjectsPage from './pages/ProjectsPage/ProjectsPage';
-import AnnotationPage from './pages/AnnotationPage/AnnotationPage';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/OnboardingPage/Login';
+import Dashboard from './pages/ProjectsPage/Dashboard';
+import Annotation from './pages/AnnotationPage/Annotation';
 import './styles/globals.css';
 
 const App: React.FC = () => {
-  // 🎯 CHANGE THIS LINE TO TEST DIFFERENT PAGES
-  const currentPage = 'projects' as 'login' | 'projects' | 'annotation';
-  
-  const renderPage = () => {
-    switch(currentPage) {
-      case 'login':
-        return <LoginPage />;
-      case 'projects':
-        return <ProjectsPage />;
-      case 'annotation':
-        return <AnnotationPage />;
-      default:
-        return <ProjectsPage />;
-    }
-  };
-
   return (
     <div className="App">
-      {renderPage()}
+      <Router>
+        <Routes>
+          {/* Default route - redirects to dashboard */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          
+          {/* Login page */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Dashboard/Projects page */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* Annotation page with dynamic project ID */}
+          <Route path="/annotation/:id" element={<Annotation />} />
+          
+          {/* Catch-all route - redirects unknown paths to dashboard */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
     </div>
   );
 };
