@@ -437,78 +437,9 @@ export default function Annotation() {
             <div className="relative bg-white rounded-lg shadow-2xl overflow-hidden w-full h-full max-w-4xl max-h-full">
               {/* Main Image */}
               <div className="relative w-full h-full flex items-center justify-center bg-gray-100">
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/87ad01551a1ce2d72bcf919f3ef50f7b767ba707?width=800"
-                  alt="Duck annotation"
-                  className="object-contain transition-transform duration-200"
-                  style={{
-                    width: '700px',
-                    height: '500px',
-                    transform: `scale(${canvasZoom / 100})`
-                  }}
-                />
-
-                {/* Annotation Overlays */}
-                <div className="absolute inset-0">
-                  {/* Bounding Box */}
-                  <div className="absolute border-2 border-gray-800 bg-transparent"
-                       style={{
-                         left: '15%',
-                         top: '20%',
-                         width: '70%',
-                         height: '60%',
-                         borderStyle: 'solid'
-                       }}>
+                
                   </div>
 
-                  {/* Neck Line (green) */}
-                  <div className="absolute"
-                       style={{
-                         left: '35%',
-                         top: '25%',
-                         width: '2px',
-                         height: '15%',
-                         backgroundColor: '#5CBF7D'
-                       }}>
-                  </div>
-
-                  {/* Body outline points */}
-                  <div className="absolute w-2 h-2 bg-gray-800 rounded-full transform -translate-x-1 -translate-y-1"
-                       style={{ left: '25%', top: '40%' }}>
-                  </div>
-                  <div className="absolute w-2 h-2 bg-gray-800 rounded-full transform -translate-x-1 -translate-y-1"
-                       style={{ left: '75%', top: '50%' }}>
-                  </div>
-                  <div className="absolute w-2 h-2 bg-gray-800 rounded-full transform -translate-x-1 -translate-y-1"
-                       style={{ left: '80%', top: '35%' }}>
-                  </div>
-
-                  {/* Leg lines */}
-                  <div className="absolute"
-                       style={{
-                         left: '40%',
-                         top: '75%',
-                         width: '1px',
-                         height: '10%',
-                         backgroundColor: '#333'
-                       }}>
-                  </div>
-                  <div className="absolute"
-                       style={{
-                         left: '55%',
-                         top: '75%',
-                         width: '1px',
-                         height: '10%',
-                         backgroundColor: '#333'
-                       }}>
-                  </div>
-
-                  {/* Beak annotation */}
-                  <div className="absolute w-1 h-6 bg-gray-800"
-                       style={{ left: '20%', top: '30%' }}>
-                  </div>
-                </div>
-              </div>
 
               {/* Canvas Controls */}
               <div className="absolute top-4 right-4 flex gap-2">
