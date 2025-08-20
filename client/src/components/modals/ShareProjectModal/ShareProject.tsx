@@ -58,7 +58,7 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+          className="absolute right-4 top-4 text-black rounded p-1 bg-transparent hover:bg-gray-200 transition-colors"
         >
           <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
             <path d="M19.5 6.5L6.5 19.5M6.5 6.5L19.5 19.5" 
@@ -74,7 +74,12 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
         <div className="flex items-center gap-3 mb-4">
           <div className="w-11 h-11 bg-black rounded-full flex items-center justify-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white">
-              <path d="M21 9.5V7.5C21 6.39543 20.1046 5.5 19 5.5H5C3.89543 5.5 3 6.39543 3 7.5V16.5C3 17.6046 3.89543 18.5 5 18.5H13M16 14L18 16L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M21 9.5V7.5C21 6.39543 20.1046 5.5 19 5.5H5C3.89543 5.5 3 6.39543 3 7.5V16.5C3 17.6046 3.89543 18.5 5 18.5H13M16 14L18 16L22 12" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              />
             </svg>
           </div>
           <h2 className="font-inter font-semibold text-xl text-black">Share {projectName}</h2>
