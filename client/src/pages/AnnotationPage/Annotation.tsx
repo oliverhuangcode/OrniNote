@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import ShareProject from "../components/modals/ShareProject";
-import Export from "../components/modals/Export";
+import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
+import Export from "../../components/modals/ExportModal/Export";
 
 interface ToolbarTool {
   id: string;

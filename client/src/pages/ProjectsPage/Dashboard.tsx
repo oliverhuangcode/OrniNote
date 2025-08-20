@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import CreateProject from "../components/modals/CreateProject";
+import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
 
 interface Project {
   id: string;
