@@ -29,7 +29,7 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ml-green via-ml-green to-white flex items-center justify-center p-4 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-highlight via-highlight to-white flex items-center justify-center p-4 lg:p-8">
       <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
         
         {/* Left side - Title */}
@@ -64,7 +64,7 @@ export default function Index() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent"
+                      className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent"
                     />
                   </div>
                   <div className="flex-1 relative">
@@ -76,7 +76,7 @@ export default function Index() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent"
+                      className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export default function Index() {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent"
+                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent"
                   />
                 </div>
 
@@ -105,7 +105,7 @@ export default function Index() {
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent"
+                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent"
                   />
                 </div>
 
@@ -119,14 +119,14 @@ export default function Index() {
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent"
+                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent"
                   />
                 </div>
 
                 {/* Create Account Button */}
                 <button
                   type="submit"
-                  className="w-full h-12 lg:h-14 bg-ml-green text-white font-jetbrains font-extrabold text-xl lg:text-2xl rounded-md hover:bg-opacity-90 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full h-12 lg:h-14 bg-highlight text-white font-jetbrains font-extrabold text-xl lg:text-2xl rounded-md hover:bg-opacity-90 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Create Account
                 </button>
@@ -166,7 +166,7 @@ export default function Index() {
                   Already have an account?{" "}
                   <Link
                     to="/login"
-                    className="text-ml-green hover:underline font-medium"
+                    className="text-highlight hover:underline font-medium"
                   >
                     Sign in here
                   </Link>

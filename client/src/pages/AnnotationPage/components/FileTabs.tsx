@@ -14,7 +14,7 @@ export default function FileTabs({ files, onSwitch, onClose }: FileTabsProps) {
         <div
           key={file.id}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${
-            file.isActive ? "bg-ml-green text-white" : "bg-white text-black border border-gray-300"
+            file.isActive ? "bg-highlight text-white" : "bg-white text-black border border-gray-300"
           }`}
           onClick={() => onSwitch(file.id)}
         >

@@ -1,40 +1,60 @@
-import React from "react";
-import { ToolbarTool } from "../types";
+import React, { useRef } from "react";
+import type { ToolbarTool } from "../types";
 
 interface LeftToolbarProps {
   tools: ToolbarTool[];
-  colorPalette: string[];
+  selectedColor: string;
+  onSelectColor: (color: string) => void;
   onSelectTool: (toolId: string) => void;
 }
 
-export default function LeftToolbar({ tools, colorPalette, onSelectTool }: LeftToolbarProps) {
-  return (
-    <div className="w-24 bg-white border-r border-gray-300 flex flex-col items-center py-4 gap-5">
-      {tools.map((tool) => (
-        <div
-          key={tool.id}
-          onClick={() => onSelectTool(tool.id)}
-          className={`w-12 h-12 rounded-xl flex items-center justify-center cursor-pointer transition-colors hover:opacity-80 ${
-            tool.isSelected ? "bg-ml-green" : tool.isActive ? "bg-ml-green" : "bg-gray-200"
-          }`}
-          title={tool.id.charAt(0).toUpperCase() + tool.id.slice(1)}
-        >
-          {tool.icon}
-        </div>
-      ))}
+export default function LeftToolbar({
+  tools,
+  selectedColor,
+  onSelectColor,
+  onSelectTool,
+}: LeftToolbarProps) {
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
-      <div className="mt-auto space-y-2">
-        {colorPalette.map((color, index) => (
-          <div
-            key={index}
-            className="w-11 h-11 rounded border-2 border-gray-300 cursor-pointer"
-            style={{ backgroundColor: color }}
-          ></div>
+  // Handler for clicking the color swatch
+  const handleColorSwatchClick = () => {
+    if (colorInputRef.current) {
+      colorInputRef.current.click();
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center p-2 bg-gray-100">
+      {/* Tool buttons */}
+      <div className="flex flex-col gap-2">
+        {tools.map(tool => (
+          <button
+            key={tool.id}
+            className={`p-1 rounded ${tool.isSelected ? "bg-highlight" : ""}`}
+            onClick={() => onSelectTool(tool.id)}
+          >
+            {tool.icon}
+          </button>
         ))}
+      </div>
+      {/* Single color swatch */}
+      <div className="mt-4">
+        <button
+          className="w-7 h-7 rounded border-2 border-gray-400"
+          style={{ backgroundColor: selectedColor }}
+          onClick={handleColorSwatchClick}
+          aria-label="Pick color"
+        />
+        <input
+          ref={colorInputRef}
+          type="color"
+          value={selectedColor}
+          onChange={e => onSelectColor(e.target.value)}
+          style={{ display: "none" }}
+        />
       </div>
     </div>
   );
 }
-
 
 

@@ -159,7 +159,7 @@ export default function Dashboard() {
         <div className="p-6 border-b border-gray-300">
           <div className="relative">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-ml-green rounded-full flex items-center justify-center">
+              <div className="w-9 h-9 bg-highlight rounded-full flex items-center justify-center">
                 <span className="text-white font-inter font-medium text-xl">J</span>
               </div>
               <div className="flex-1">
@@ -237,7 +237,7 @@ export default function Dashboard() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-200 rounded-lg px-4 py-3 pl-12 font-inter text-xl text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-ml-green"
+              className="w-full bg-gray-200 rounded-lg px-4 py-3 pl-12 font-inter text-xl text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-highlight"
             />
             <svg width="26" height="26" viewBox="0 0 26 26" fill="none" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
               <path d="M22.75 22.75L18.0375 18.0375M20.5833 11.9167C20.5833 16.7031 16.7031 20.5833 11.9167 20.5833C7.1302 20.5833 3.25 16.7031 3.25 11.9167C3.25 7.1302 7.1302 3.25 11.9167 3.25C16.7031 3.25 20.5833 7.1302 20.5833 11.9167Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -292,7 +292,7 @@ export default function Dashboard() {
             {currentView !== "deleted" && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 bg-ml-green text-white px-6 py-2 rounded-lg font-inter font-medium hover:bg-opacity-90 transition-colors"
+                className="flex items-center gap-2 bg-highlight text-white px-6 py-2 rounded-lg font-inter font-medium hover:bg-opacity-90 transition-colors"
               >
                 <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
                   <path d="M8.50008 3.54169V13.4584M3.54175 8.50002H13.4584" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -327,7 +327,7 @@ export default function Dashboard() {
                         setShowSortDropdown(false);
                       }}
                       className={`w-full px-4 py-2 text-left font-inter text-base hover:bg-gray-50 ${
-                        sortBy === option ? "bg-ml-green bg-opacity-10 text-ml-green" : "text-gray-700"
+                        sortBy === option ? "bg-highlight bg-opacity-10 text-highlight" : "text-gray-700"
                       }`}
                     >
                       {option}
@@ -420,7 +420,7 @@ export default function Dashboard() {
                               e.stopPropagation();
                               handleRestoreProject(project.id);
                             }}
-                            className="px-3 py-1 bg-ml-green text-white text-xs rounded hover:bg-opacity-80 transition-colors"
+                            className="px-3 py-1 bg-highlight text-white text-xs rounded hover:bg-opacity-80 transition-colors"
                           >
                             Restore
                           </button>
@@ -438,7 +438,7 @@ export default function Dashboard() {
                         <div className="flex gap-2">
                           <Link
                             to={`/annotation/${project.id}`}
-                            className="px-3 py-1 bg-ml-green text-white text-xs rounded hover:bg-opacity-80 transition-colors"
+                            className="px-3 py-1 bg-highlight text-white text-xs rounded hover:bg-opacity-80 transition-colors"
                           >
                             Open
                           </Link>

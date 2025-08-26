@@ -1,11 +1,15 @@
 import React, { useCallback, useState } from "react";
 import type { Annotation } from "../../../types";
 
-export function useBrushTool(onCreate: (annotation: Annotation) => void, options?: { color?: string; strokeWidth?: number }) {
+// Accept color as a required prop (not just in options)
+export function useBrushTool(
+  onCreate: (annotation: Annotation) => void,
+  color: string,
+  options?: { strokeWidth?: number }
+) {
   const [pathData, setPathData] = useState<string | null>(null);
   const [points, setPoints] = useState<{ x: number; y: number }[]>([]);
 
-  const color = options?.color || "#5CBF7D";
   const strokeWidth = options?.strokeWidth || 3;
 
   const onMouseDown = useCallback((x: number, y: number) => {
@@ -38,8 +42,16 @@ export function useBrushTool(onCreate: (annotation: Annotation) => void, options
     setPoints([]);
   }, [color, onCreate, pathData, points, strokeWidth]);
 
+  // Use the passed color for preview
   const preview = pathData ? (
-    <path d={pathData} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    <path
+      d={pathData}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   ) : null;
 
   return { onMouseDown, onMouseMove, onMouseUp, preview };

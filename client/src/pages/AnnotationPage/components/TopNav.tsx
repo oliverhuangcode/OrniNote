@@ -50,7 +50,7 @@ export default function TopNav({
       <div className="h-28 flex items-center px-4">
         <Link
           to="/dashboard"
-          className="w-16 h-16 bg-ml-green rounded-full flex items-center justify-center hover:bg-opacity-80 transition-colors cursor-pointer"
+          className="w-16 h-16 bg-highlight rounded-full flex items-center justify-center hover:bg-opacity-80 transition-colors cursor-pointer"
         >
           <span className="font-inter font-bold text-xs text-white">ML Tool</span>
         </Link>
@@ -61,7 +61,7 @@ export default function TopNav({
         {/* File Menu */}
         <div className="relative">
           <button
-            className="font-inter text-base text-black hover:text-ml-green transition-colors"
+            className="font-inter text-base text-black hover:text-highlight transition-colors"
             onClick={onToggleFileMenu}
           >
             File
@@ -81,7 +81,7 @@ export default function TopNav({
         {/* Edit Menu */}
         <div className="relative">
           <button
-            className="font-inter text-base text-black hover:text-ml-green transition-colors"
+            className="font-inter text-base text-black hover:text-highlight transition-colors"
             onClick={onToggleEditMenu}
           >
             Edit
@@ -102,7 +102,7 @@ export default function TopNav({
         {/* View Menu */}
         <div className="relative">
           <button
-            className="font-inter text-base text-black hover:text-ml-green transition-colors"
+            className="font-inter text-base text-black hover:text-highlight transition-colors"
             onClick={onToggleViewMenu}
           >
             View
@@ -119,18 +119,18 @@ export default function TopNav({
           )}
         </div>
 
-        <button className="font-inter text-base text-black hover:text-ml-green transition-colors" onClick={() => console.log("Annotation menu")}>Annotation</button>
-        <button className="font-inter text-base text-black hover:text-ml-green transition-colors" onClick={() => console.log("Layers menu")}>Layers</button>
-        <button className="font-inter text-base text-black hover:text-ml-green transition-colors" onClick={() => console.log("Tools menu")}>Tools</button>
-        <button className="font-inter text-base text-black hover:text-ml-green transition-colors" onClick={onShowShareModal}>Collaboration</button>
-        <button className="font-inter text-base text-black hover:text-ml-green transition-colors" onClick={() => console.log("Settings menu")}>Settings</button>
-        <button className="font-inter text-base text-black hover:text-ml-green transition-colors" onClick={() => console.log("Help menu")}>Help</button>
+        <button className="font-inter text-base text-black hover:text-highlight transition-colors" onClick={() => console.log("Annotation menu")}>Annotation</button>
+        <button className="font-inter text-base text-black hover:text-highlight transition-colors" onClick={() => console.log("Layers menu")}>Layers</button>
+        <button className="font-inter text-base text-black hover:text-highlight transition-colors" onClick={() => console.log("Tools menu")}>Tools</button>
+        <button className="font-inter text-base text-black hover:text-highlight transition-colors" onClick={onShowShareModal}>Collaboration</button>
+        <button className="font-inter text-base text-black hover:text-highlight transition-colors" onClick={() => console.log("Settings menu")}>Settings</button>
+        <button className="font-inter text-base text-black hover:text-highlight transition-colors" onClick={() => console.log("Help menu")}>Help</button>
       </div>
 
       {/* Breadcrumb Navigation */}
       <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
         <nav className="flex items-center space-x-2 text-sm font-inter">
-          <Link to="/dashboard" className="text-ml-green hover:text-ml-green/80 transition-colors">
+          <Link to="/dashboard" className="text-highlight hover:text-highlight/80 transition-colors">
             Dashboard
           </Link>
           <span className="text-gray-400">/</span>
@@ -162,7 +162,7 @@ export default function TopNav({
         <div className="flex items-center gap-6">
           <button
             onClick={onShowShareModal}
-            className="flex items-center gap-2 text-ml-green font-inter font-bold"
+            className="flex items-center gap-2 text-highlight font-inter font-bold"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M18 22C17.1667 22 16.4583 21.7083 15.875 21.125C15.2917 20.5417 15 19.8333 15 19C15 18.8833 15.0083 18.7625 15.025 18.6375C15.0417 18.5125 15.0667 18.4 15.1 18.3L8.05 14.2C7.76667 14.45 7.45 14.6458 7.1 14.7875C6.75 14.9292 6.38333 15 6 15C5.16667 15 4.45833 14.7083 3.875 14.125C3.29167 13.5417 3 12.8333 3 12C3 11.1667 3.29167 10.4583 3.875 9.875C4.45833 9.29167 5.16667 9 6 9C6.38333 9 6.75 9.07083 7.1 9.2125C7.45 9.35417 7.76667 9.55 8.05 9.8L15.1 5.7C15.0667 5.6 15.0417 5.4875 15.025 5.3625C15.0083 5.2375 15 5.11667 15 5C15 4.16667 15.2917 3.45833 15.875 2.875C16.4583 2.29167 17.1667 2 18 2C18.8333 2 19.5417 2.29167 20.125 2.875C20.7083 3.45833 21 4.16667 21 5C21 5.83333 20.7083 6.54167 20.125 7.125C19.5417 7.70833 18.8333 8 18 8C17.6167 8 17.25 7.92917 16.9 7.7875C16.55 7.64583 16.2333 7.45 15.95 7.2L8.9 11.3C8.93333 11.4 8.95833 11.5125 8.975 11.6375C8.99167 11.7625 9 11.8833 9 12C9 12.1167 8.99167 12.2375 8.975 12.3625C8.95833 12.4875 8.93333 12.6 8.9 12.7L15.95 16.8C16.2333 16.55 16.55 16.3542 16.9 16.2125C17.25 16.0708 17.6167 16 18 16C18.8333 16 19.5417 16.2917 20.125 16.875C20.7083 17.4583 21 18.1667 21 19C21 19.8333 20.7083 20.5417 20.125 21.125C19.5417 21.7083 18.8333 22 18 22Z" fill="#5CBF7D"/>
@@ -171,7 +171,7 @@ export default function TopNav({
           </button>
           <button
             onClick={onShowExportModal}
-            className="flex items-center gap-2 text-ml-green font-inter font-bold"
+            className="flex items-center gap-2 text-highlight font-inter font-bold"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M3 9V15C3 15.3978 3.15804 15.7794 3.43934 16.0607C3.72064 16.342 4.10218 16.5 4.5 16.5H13.5C13.8978 16.5 14.2794 16.342 14.5607 16.0607C14.842 15.7794 15 15.3978 15 15V9M12 4.5L9 1.5M9 1.5L6 4.5M9 1.5V11.25" stroke="#5CBF7D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -186,7 +186,7 @@ export default function TopNav({
           <div className="relative">
             <button
               onClick={onToggleUserDropdown}
-              className="w-9 h-9 bg-ml-green rounded-full flex items-center justify-center hover:bg-opacity-80 transition-colors"
+              className="w-9 h-9 bg-highlight rounded-full flex items-center justify-center hover:bg-opacity-80 transition-colors"
             >
               <span className="text-white font-inter font-bold">J</span>
             </button>

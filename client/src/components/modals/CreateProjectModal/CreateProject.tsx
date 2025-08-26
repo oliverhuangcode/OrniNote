@@ -99,7 +99,7 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
           <div className="mb-8">
             <div
               className={`relative border-2 border-dashed rounded-3xl h-64 flex items-center justify-center transition-colors ${
-                dragActive ? "border-ml-green bg-ml-green bg-opacity-10" : "border-ml-gray bg-gray-100"
+                dragActive ? "border-highlight bg-highlight bg-opacity-10" : "border-ml-gray bg-gray-100"
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -138,7 +138,7 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
                 type="text"
                 value={projectData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-ml-green"
+                className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight"
               />
             </div>
 
@@ -149,7 +149,7 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
                 type="number"
                 value={projectData.width}
                 onChange={(e) => handleInputChange('width', parseInt(e.target.value))}
-                className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-ml-green"
+                className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight"
               />
             </div>
 
@@ -160,7 +160,7 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
                 type="number"
                 value={projectData.height}
                 onChange={(e) => handleInputChange('height', parseInt(e.target.value))}
-                className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-ml-green"
+                className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight"
               />
             </div>
 
@@ -196,7 +196,7 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
           {/* Create Button */}
           <button
             type="submit"
-            className="w-full bg-ml-green text-white font-inter font-bold text-lg py-3 rounded-lg hover:bg-opacity-90 transition-all duration-200 shadow-lg"
+            className="w-full bg-highlight text-white font-inter font-bold text-lg py-3 rounded-lg hover:bg-opacity-90 transition-all duration-200 shadow-lg"
           >
             Create
           </button>

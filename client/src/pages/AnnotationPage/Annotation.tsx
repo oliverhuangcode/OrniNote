@@ -31,6 +31,11 @@ export default function Annotation() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
+  // --- Add this for color palette state ---
+  const colorPalette = ["#3B3B3B", "#5CBF7D"];
+  const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
+  // ----------------------------------------
+
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
   };
@@ -91,8 +96,6 @@ export default function Annotation() {
     },
   ];
 
-  const colorPalette = ["#3B3B3B", "#5CBF7D"];
-
   const layers: Layer[] = [
     { id: "1", name: "Bounding Boxes (1)", visible: true, locked: false },
     { id: "2", name: "Neck Lines (1)", color: "#5CBF7D", visible: true, locked: false },
@@ -137,11 +140,17 @@ export default function Annotation() {
 
       {/* Main Content */}
       <div className="flex flex-1">
-        <LeftToolbar tools={toolbarTools} colorPalette={colorPalette} onSelectTool={handleToolSelect} />
+        <LeftToolbar
+          tools={toolbarTools}
+          selectedColor={selectedColor}
+          onSelectColor={setSelectedColor}
+          onSelectTool={handleToolSelect}
+        />
         <CanvasArea
           zoomPercent={canvasZoom}
           onZoom={handleCanvasZoom}
           selectedTool={selectedTool}
+          selectedColor={selectedColor}
           annotations={annotations}
           setAnnotations={setAnnotations}
           currentAnnotation={currentAnnotation}

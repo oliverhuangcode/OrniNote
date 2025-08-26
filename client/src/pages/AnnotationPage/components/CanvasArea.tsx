@@ -18,19 +18,20 @@ interface CanvasAreaProps {
   setIsDrawing: React.Dispatch<React.SetStateAction<boolean>>;
   selectedAnnotationId: string | null;
   setSelectedAnnotationId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedColor: string;
 }
 
-export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotations, setAnnotations, currentAnnotation, setCurrentAnnotation, isDrawing, setIsDrawing, selectedAnnotationId, setSelectedAnnotationId }: CanvasAreaProps) {
+export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotations, setAnnotations, currentAnnotation, setCurrentAnnotation, isDrawing, setIsDrawing, selectedAnnotationId, setSelectedAnnotationId, selectedColor, }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
   const pixelScale = useMemo(() => (zoomPercent / 100), [zoomPercent]);
 
   // Hooked tools
   const addAnnotation = useCallback((a: Annotation) => setAnnotations(prev => [...prev, a]), [setAnnotations]);
-  const textTool = useTextTool(pixelScale, addAnnotation);
-  const lineTool = useLineTool(addAnnotation);
-  const rectTool = useShapeTool("rectangle", addAnnotation);
-  const brushTool = useBrushTool(addAnnotation);
+  const textTool = useTextTool(pixelScale, addAnnotation, selectedColor);
+  const lineTool = useLineTool(addAnnotation, selectedColor);
+  const rectTool = useShapeTool("rectangle", addAnnotation, selectedColor);
+  const brushTool = useBrushTool(addAnnotation, selectedColor);
 
   const [interaction, setInteraction] = useState<
     | null

@@ -202,7 +202,7 @@ In flight: ${data.attributes.inflight}`;
             <div className="relative">
               <button
                 onClick={() => setShowFormatDropdown(!showFormatDropdown)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-600 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-ml-green"
+                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-600 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-highlight"
               >
                 <span>{selectedFormat || "Select format"}</span>
                 <svg width="12" height="7" viewBox="0 0 12 7" fill="none" className={`transform transition-transform ${showFormatDropdown ? 'rotate-180' : ''}`}>
@@ -234,7 +234,7 @@ In flight: ${data.attributes.inflight}`;
             <div className="relative">
               <button
                 onClick={() => setShowPagesDropdown(!showPagesDropdown)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-600 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-ml-green"
+                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-600 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-highlight"
               >
                 <span>{pageOptions.find(opt => opt.value === selectedPages)?.label || "Select pages"}</span>
                 <svg width="12" height="7" viewBox="0 0 12 7" fill="none" className={`transform transition-transform ${showPagesDropdown ? 'rotate-180' : ''}`}>
@@ -263,7 +263,7 @@ In flight: ${data.attributes.inflight}`;
           {/* Export Button */}
           <button
             onClick={handleExport}
-            className="w-full bg-ml-green text-white font-inter font-bold text-lg py-3 rounded-lg hover:bg-opacity-90 transition-all duration-200 shadow-lg"
+            className="w-full bg-highlight text-white font-inter font-bold text-lg py-3 rounded-lg hover:bg-opacity-90 transition-all duration-200 shadow-lg"
           >
             EXPORT
           </button>

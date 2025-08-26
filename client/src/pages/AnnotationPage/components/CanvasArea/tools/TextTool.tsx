@@ -1,7 +1,12 @@
 import React, { useCallback, useState } from "react";
 import type { Annotation } from "../../../types";
 
-export function useTextTool(pixelScale: number, onCreate: (annotation: Annotation) => void) {
+// Add color as a required argument
+export function useTextTool(
+  pixelScale: number,
+  onCreate: (annotation: Annotation) => void,
+  color: string
+) {
   const [textInput, setTextInput] = useState("");
   const [textInputPos, setTextInputPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -24,13 +29,13 @@ export function useTextTool(pixelScale: number, onCreate: (annotation: Annotatio
       properties: {
         position: { x: textInputPos.x, y: textInputPos.y },
         text: trimmed,
-        style: { color: "#1E1E1E", fontSize: 16, fontFamily: "Inter, system-ui, sans-serif" },
+        style: { color: color, fontSize: 16, fontFamily: "Inter, system-ui, sans-serif" },
       },
     };
     onCreate(a);
     setTextInputPos(null);
     setTextInput("");
-  }, [onCreate, textInput, textInputPos]);
+  }, [onCreate, textInput, textInputPos, color]);
 
   const overlay = textInputPos ? (
     <input
