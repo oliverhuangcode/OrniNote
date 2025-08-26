@@ -4,6 +4,7 @@ import AnnotationLayer from "./CanvasArea/AnnotationLayer";
 import useTextTool from "./CanvasArea/tools/TextTool";
 import useLineTool from "./CanvasArea/tools/LineTool";
 import useShapeTool from "./CanvasArea/tools/ShapeTool";
+import useBrushTool from "./CanvasArea/tools/BrushTool";
 
 interface CanvasAreaProps {
   zoomPercent: number;
@@ -21,6 +22,7 @@ interface CanvasAreaProps {
 
 export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotations, setAnnotations, currentAnnotation, setCurrentAnnotation, isDrawing, setIsDrawing, selectedAnnotationId, setSelectedAnnotationId }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const zoomLayerRef = useRef<HTMLDivElement | null>(null);
   const pixelScale = useMemo(() => (zoomPercent / 100), [zoomPercent]);
 
   // Hooked tools
@@ -28,6 +30,7 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
   const textTool = useTextTool(pixelScale, addAnnotation);
   const lineTool = useLineTool(addAnnotation);
   const rectTool = useShapeTool("rectangle", addAnnotation);
+  const brushTool = useBrushTool(addAnnotation);
 
   const [interaction, setInteraction] = useState<
     | null
@@ -37,9 +40,9 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
   >(null);
 
   const toLocalPoint = useCallback((clientX: number, clientY: number) => {
-    const container = containerRef.current;
-    if (!container) return { x: clientX, y: clientY };
-    const bounds = container.getBoundingClientRect();
+    const layer = zoomLayerRef.current ?? containerRef.current;
+    if (!layer) return { x: clientX, y: clientY };
+    const bounds = layer.getBoundingClientRect();
     const x = (clientX - bounds.left) / pixelScale;
     const y = (clientY - bounds.top) / pixelScale;
     return { x, y };
@@ -59,6 +62,7 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
     const { x, y } = toLocalPoint(e.clientX, e.clientY);
     if (selectedTool === "line") lineTool.onMouseDown(x, y);
     if (selectedTool === "rectangle" || selectedTool === "polygon") rectTool.onMouseDown(x, y);
+    if (selectedTool === "brush") brushTool.onMouseDown(x, y);
     if (selectedTool === "move") {
       const target = e.target as Element;
       const g = target.closest('g[data-ann-id]') as SVGGElement | null;
@@ -76,13 +80,14 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
     } else {
       setIsDrawing(true);
     }
-  }, [annotations, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, setSelectedAnnotationId]);
+  }, [annotations, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, setSelectedAnnotationId, brushTool]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!isDrawing) return;
     const { x, y } = toLocalPoint(e.clientX, e.clientY);
     if (selectedTool === "line") lineTool.onMouseMove(x, y);
     else if (selectedTool === "rectangle" || selectedTool === "polygon") rectTool.onMouseMove(x, y);
+    else if (selectedTool === "brush") brushTool.onMouseMove(x, y);
     else if (selectedTool === "move" && interaction) {
       const dx = x - interaction.start.x;
       const dy = y - interaction.start.y;
@@ -126,16 +131,17 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
         return cloned;
       }));
     }
-  }, [isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, interaction, setAnnotations]);
+  }, [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, interaction, setAnnotations]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!isDrawing) return;
     const { x, y } = toLocalPoint(e.clientX, e.clientY);
     if (selectedTool === "line") lineTool.onMouseUp(x, y);
     else if (selectedTool === "rectangle" || selectedTool === "polygon") rectTool.onMouseUp(x, y);
+    else if (selectedTool === "brush") brushTool.onMouseUp();
     setIsDrawing(false);
     setInteraction(null);
-  }, [isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing]);
+  }, [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing]);
 
   // Text tool handles its own overlay and commit
 
@@ -146,7 +152,7 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
       <div className="absolute inset-0 flex items-center justify-center p-4" ref={containerRef}>
         <div className="relative bg-white rounded-lg shadow-2xl overflow-hidden w-full h-full max-w-4xl max-h-full">
           <div className="relative w-full h-full flex items-center justify-center bg-gray-100">
-            <div className="absolute inset-0" style={zoomStyle}>
+            <div ref={zoomLayerRef} className="absolute inset-0" style={zoomStyle}>
               <AnnotationLayer
                 annotations={annotations}
                 onClick={handleCanvasClick}
@@ -154,7 +160,7 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
               >
-                {selectedTool === "line" ? lineTool.preview : (selectedTool === "rectangle" || selectedTool === "polygon") ? rectTool.preview : null}
+                {selectedTool === "line" ? lineTool.preview : (selectedTool === "rectangle" || selectedTool === "polygon") ? rectTool.preview : selectedTool === "brush" ? brushTool.preview : null}
                 {selectedAnnotationId ? (() => {
                   const a = annotations.find(x => x.id === selectedAnnotationId);
                   if (!a) return null;

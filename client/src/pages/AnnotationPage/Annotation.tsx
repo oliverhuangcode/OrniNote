@@ -7,7 +7,7 @@ import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
 import TopNav from "./components/TopNav";
 import { ActiveFile, Layer, ToolbarTool } from "./types";
-import { Move, Search, Maximize, Square, Minus, PenTool, Edit as EditIcon, Type, Pipette } from "lucide-react";
+import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2 } from "lucide-react";
 import type { Annotation as AnnotationType } from "./types";
 
 export default function Annotation() {
@@ -70,14 +70,14 @@ export default function Annotation() {
       icon: <Minus className={selectedTool === "line" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
     },
     {
-      id: "pen",
-      isSelected: selectedTool === "pen",
-      icon: <PenTool className={selectedTool === "pen" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      id: "brush",
+      isSelected: selectedTool === "brush",
+      icon: <Brush className={selectedTool === "brush" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
     },
     {
       id: "edit",
       isSelected: selectedTool === "edit",
-      icon: <EditIcon className={selectedTool === "edit" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      icon: <Wand2 className={selectedTool === "edit" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
     },
     {
       id: "text",

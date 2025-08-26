@@ -3,6 +3,7 @@ import type { Annotation } from "../../types";
 import TextAnnotation from "../annotations/TextAnnotation";
 import LineAnnotation from "../annotations/LineAnnotation";
 import ShapeAnnotation from "../annotations/ShapeAnnotation";
+import PathAnnotation from "../annotations/PathAnnotation";
 
 interface AnnotationLayerProps {
   annotations: Annotation[];
@@ -21,6 +22,7 @@ export default function AnnotationLayer({ annotations, onClick, onMouseDown, onM
           {a.type === "text" ? <TextAnnotation annotation={a} /> : null}
           {a.type === "line" ? <LineAnnotation annotation={a} /> : null}
           {a.type === "rectangle" ? <ShapeAnnotation annotation={a} /> : null}
+          {a.type === "path" ? <PathAnnotation annotation={a} /> : null}
         </g>
       ))}
       {children}

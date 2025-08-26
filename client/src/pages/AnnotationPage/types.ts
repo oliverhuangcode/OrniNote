@@ -21,7 +21,7 @@ export interface ActiveFile {
 
 
 // Annotation types for SVG-based tools
-export type AnnotationType = "text" | "line" | "rectangle" | "polygon";
+export type AnnotationType = "text" | "line" | "rectangle" | "polygon" | "path";
 
 export interface Point {
   x: number;
