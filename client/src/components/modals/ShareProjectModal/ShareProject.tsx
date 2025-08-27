@@ -20,15 +20,49 @@ const initialTeamMembers: TeamMember[] = [
   { id: "3", name: "Joe Doe", role: "Viewer", color: "#F39A4D", initial: "J" },
 ];
 
-export default function ShareProject({ isOpen, onClose, projectName = "Project" }: ShareProjectProps) {
+export default function ShareProject({ isOpen, onClose, projectName = "Project"}: ShareProjectProps) {
   const [email, setEmail] = useState("");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
 
-  const handleInvite = () => {
-    if (email.trim()) {
-      console.log("Inviting:", email);
-      setEmail("");
+  const handleInvite = async () => {
+    if (!email.trim()) return;
+
+    try {
+      // Send invite request to backend
+      const response = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          projectName,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Invitation sent!");
+
+        // Add invited email to team members dynamically
+        setTeamMembers(prev => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            name: email,
+            role: "Viewer",
+            color: "#A0AEC0", // gray for new members
+            initial: email.charAt(0).toUpperCase(),
+          },
+        ]);
+
+        setEmail(""); // clear input
+      } else {
+        alert("Failed to send invite: " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error sending invitation.");
     }
   };
 
@@ -150,7 +184,7 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
                     <select
                       value={member.role}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as "Editor" | "Viewer")}
-                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight pr-8"
+                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-ml-green pr-8"
                     >
                       <option value="Editor">Editor</option>
                       <option value="Viewer">Viewer</option>

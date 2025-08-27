@@ -8,6 +8,7 @@ module.exports = {
     extend: {
       colors: {
         highlight: '#13ba83',
+        'ml-green': '#5CBF7D'
       },
       fontFamily: {
         'inter': ['Inter', 'sans-serif'],

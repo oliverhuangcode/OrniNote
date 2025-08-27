@@ -51,10 +51,10 @@ app.get('/api/test', (req, res) => {
 app.post('/api/test-user', async (req, res) => {
   try {
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      username: "testingglobalorninoteaccount" 
+    const existingUser = await User.findOne({
+      username: "testingglobalorninoteaccount"
     });
-    
+
     if (existingUser) {
       return res.json({
         message: 'Test user already exists',
@@ -67,10 +67,10 @@ app.post('/api/test-user', async (req, res) => {
       password: "orninote",
       email: "orninote@gmail.com"
     });
-    
+
     const savedUser = await user1.save();
     console.log('User created:', savedUser);
-    
+
     res.json({
       message: 'Test user created successfully',
       user: savedUser
@@ -97,6 +97,10 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Invite routes 
+import inviteRoutes from './routes/invite.js';
+app.use('/api', inviteRoutes);
+
 // 404 handler
 app.use('*', (req, res) => {
   console.log('404 - Route not found:', req.originalUrl);
@@ -112,7 +116,7 @@ async function startServer() {
     // Connect to MongoDB first
     await connectToDB();
     console.log('✓ Database connected successfully');
-    
+
     // Then start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
