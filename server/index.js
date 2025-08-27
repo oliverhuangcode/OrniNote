@@ -6,7 +6,7 @@ import { User } from './models/users.js';
 
 dotenv.config();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT_MONGO;
 
 const app = express();
 app.use(express.json()) // might not need
@@ -19,9 +19,9 @@ app.listen(PORT, () => {
 
 
 const user1 = new User({
-    username: "a",
-    password: "testerpass",
-    email: "a@helloworld.com"
+    username: "testingglobalorninoteaccount",
+    password: "orninote",
+    email: "orninote@gmail.com"
 });
 
 const savedUser = await user1.save();
