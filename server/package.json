@@ -2,11 +2,11 @@
   "name": "bird-annotation-server",
   "version": "1.0.0",
   "description": "Backend for bird annotation tool",
-  "main": "index.js",
+  "main": "src/app.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon index.js",
-    "dev": "nodemon index.js"
+    "start": "nodemon src/app.js",
+    "dev": "nodemon src/app.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.876.0",
