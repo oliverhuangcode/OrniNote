@@ -104,12 +104,12 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent shadow-sm"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent shadow-sm"
             />
           </div>
           <button
             onClick={handleInvite}
-            className="px-6 py-3 bg-ml-green text-white font-inter rounded-lg hover:bg-opacity-90 transition-colors shadow-sm"
+            className="px-6 py-3 bg-highlight text-white font-inter rounded-lg hover:bg-opacity-90 transition-colors shadow-sm"
           >
             Invite
           </button>
@@ -136,7 +136,7 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
                     <select
                       value={member.role}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as "Editor" | "Viewer")}
-                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-ml-green pr-8"
+                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight pr-8"
                     >
                       <option value="Editor">Editor</option>
                       <option value="Viewer">Viewer</option>

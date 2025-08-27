@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'ml-green': '#10B981', // Add your custom green color here if needed
+        highlight: '#13ba83',
       },
       fontFamily: {
         'inter': ['Inter', 'sans-serif'],

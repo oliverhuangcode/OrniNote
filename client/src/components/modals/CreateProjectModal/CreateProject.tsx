@@ -173,7 +173,7 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
           <div className="mb-8">
             <div
               className={`relative border-2 border-dashed rounded-3xl h-64 flex items-center justify-center transition-colors ${
-                dragActive ? "border-ml-green bg-ml-green bg-opacity-10" : "border-ml-gray bg-gray-100"
+                dragActive ? "border-highlight bg-highlight bg-opacity-10" : "border-ml-gray bg-gray-100"
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
