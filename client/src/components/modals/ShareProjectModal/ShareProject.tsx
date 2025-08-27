@@ -54,40 +54,54 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl w-full max-w-2xl relative shadow-2xl p-8">
+      <div className="bg-white rounded-2xl w-full max-w-lg relative shadow-xl p-6">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-6 top-6 text-black hover:text-gray-600"
+          className="absolute right-4 top-4 text-black rounded p-1 bg-transparent hover:bg-gray-200 transition-colors"
         >
-          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-            <path d="M19.5 6.5L6.5 19.5M6.5 6.5L19.5 19.5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
+            <path d="M19.5 6.5L6.5 19.5M6.5 6.5L19.5 19.5" 
+            stroke="currentColor" 
+            strokeWidth="2.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            />
           </svg>
         </button>
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <div className="w-11 h-11 bg-black rounded-full flex items-center justify-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white">
-              <path d="M21 9.5V7.5C21 6.39543 20.1046 5.5 19 5.5H5C3.89543 5.5 3 6.39543 3 7.5V16.5C3 17.6046 3.89543 18.5 5 18.5H13M16 14L18 16L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M21 9.5V7.5C21 6.39543 20.1046 5.5 19 5.5H5C3.89543 5.5 3 6.39543 3 7.5V16.5C3 17.6046 3.89543 18.5 5 18.5H13M16 14L18 16L22 12" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              />
             </svg>
           </div>
-          <h2 className="font-inter font-bold text-2xl text-black">Share {projectName}</h2>
+          <h2 className="font-inter font-semibold text-xl text-black">Share {projectName}</h2>
         </div>
 
-        {/* Description */}
-        <p className="text-gray-500 font-inter text-base mb-6">
-          Share this project with your teammates for real-time collaboration
-        </p>
+        {/* Description + Copy Link Button */}
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-gray-500 font-inter text-sm">
+            Invite your teammates to collaborate in real-time
+          </p>
 
-        {/* Copy Link Button */}
-        <div className="flex justify-end mb-6">
           <button
             onClick={handleCopyLink}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-inter"
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-inter text-sm"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 13L16.5 6.5M16.5 6.5H13M16.5 6.5V10M10 3H5C4.46957 3 3.96086 3.21071 3.58579 3.58579C3.21071 3.96086 3 4.46957 3 5V15C3 15.5304 3.21071 16.0391 3.58579 16.4142C3.96086 16.7893 4.46957 17 5 17H15C15.5304 17 16.0391 16.7893 16.4142 16.4142C16.7893 16.0391 17 15.5304 17 15V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path d="M10 13L16.5 6.5M16.5 6.5H13M16.5 6.5V10M10 3H5C4.46957 3 3.96086 3.21071 3.58579 3.58579C3.21071 3.96086 3 4.46957 3 5V15C3 15.5304 3.21071 16.0391 3.58579 16.4142C3.96086 16.7893 4.46957 17 5 17H15C15.5304 17 16.0391 16.7893 16.4142 16.4142C16.7893 16.0391 17 15.5304 17 15V10" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              />
             </svg>
             <span>{showCopySuccess ? "Copied!" : "Copy link"}</span>
           </button>
@@ -104,12 +118,12 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg font-inter text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent shadow-sm"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg font-inter text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-ml-green focus:border-transparent shadow-sm"
             />
           </div>
           <button
             onClick={handleInvite}
-            className="px-6 py-3 bg-highlight text-white font-inter rounded-lg hover:bg-opacity-90 transition-colors shadow-sm"
+            className="px-5 py-2 bg-ml-green text-white text-sm font-inter rounded-lg hover:bg-opacity-90 transition-colors"
           >
             Invite
           </button>
@@ -126,11 +140,11 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
                 {member.initial}
               </div>
               <div className="flex-1">
-                <span className="font-inter text-base text-black">{member.name}</span>
+                <span className="font-inter text-sm text-black">{member.name}</span>
               </div>
               <div className="flex items-center gap-2">
                 {member.role === "Owner" ? (
-                  <span className="text-gray-500 font-inter">{member.role}</span>
+                  <span className="font-inter text-gray-500 text-sm">{member.role}</span>
                 ) : (
                   <div className="relative">
                     <select
