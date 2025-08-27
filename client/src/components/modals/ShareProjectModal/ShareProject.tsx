@@ -150,7 +150,7 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
                     <select
                       value={member.role}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as "Editor" | "Viewer")}
-                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-ml-green pr-8"
+                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight pr-8"
                     >
                       <option value="Editor">Editor</option>
                       <option value="Viewer">Viewer</option>
