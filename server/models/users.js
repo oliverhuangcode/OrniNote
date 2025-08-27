@@ -26,7 +26,4 @@ const userSchema = new Schema({
   timestamps: true // mongoose automatically adds createdAt and updatedAt with timestamps
 });
 
-userSchema.index({ username: 1 });
-userSchema.index({ email: 1 });
-
 export const User = mongoose.model('User', userSchema);
