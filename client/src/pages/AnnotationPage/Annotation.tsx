@@ -7,7 +7,7 @@ import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
 import TopNav from "./components/TopNav";
 import { ActiveFile, Layer, ToolbarTool } from "./types";
-import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2 } from "lucide-react";
+import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
 import type { Annotation as AnnotationType } from "./types";
 
 export default function Annotation() {
@@ -60,9 +60,9 @@ export default function Annotation() {
       icon: <Search className={selectedTool === "search" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
     },
     {
-      id: "expand",
-      isSelected: selectedTool === "expand",
-      icon: <Maximize className={selectedTool === "expand" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      id: "marquee",
+      isSelected: selectedTool === "marquee",
+      icon: <Maximize className={selectedTool === "marquee" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
     },
     {
       id: "rectangle",
@@ -93,6 +93,11 @@ export default function Annotation() {
       id: "eyedropper",
       isSelected: selectedTool === "eyedropper",
       icon: <Pipette className={selectedTool === "eyedropper" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+    },
+    {
+      id: "pen",
+      isSelected: selectedTool === "pen",
+      icon: <Pen className={selectedTool === "pen" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
     },
   ];
 

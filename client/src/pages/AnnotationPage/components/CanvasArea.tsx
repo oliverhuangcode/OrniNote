@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Annotation } from "../types";
 import AnnotationLayer from "./CanvasArea/AnnotationLayer";
 import useTextTool from "./CanvasArea/tools/TextTool";
 import useLineTool from "./CanvasArea/tools/LineTool";
 import useShapeTool from "./CanvasArea/tools/ShapeTool";
 import useBrushTool from "./CanvasArea/tools/BrushTool";
+import usePenTool from "./CanvasArea/tools/PenTool";
 
 interface CanvasAreaProps {
   zoomPercent: number;
@@ -32,6 +33,17 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
   const lineTool = useLineTool(addAnnotation, selectedColor);
   const rectTool = useShapeTool("rectangle", addAnnotation, selectedColor);
   const brushTool = useBrushTool(addAnnotation, selectedColor);
+  const penTool = usePenTool(addAnnotation, selectedColor);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedTool === "pen" && e.key === "Escape") {
+        if (penTool.clear) penTool.clear();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedTool, penTool]);
 
   const [interaction, setInteraction] = useState<
     | null
@@ -39,6 +51,10 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
     | { kind: "resize-rect"; annId: string; handle: "nw" | "ne" | "sw" | "se"; start: { x: number; y: number }; original: Annotation }
     | { kind: "line-end"; annId: string; index: 0 | 1; start: { x: number; y: number }; original: Annotation }
   >(null);
+
+  const [marqueeRect, setMarqueeRect] = useState<{x: number, y: number, w: number, h: number} | null>(null);
+  const [groupSelection, setGroupSelection] = useState<string[]>([]);
+  const [marqueeStart, setMarqueeStart] = useState<{x: number, y: number} | null>(null);
 
   const toLocalPoint = useCallback((clientX: number, clientY: number) => {
     const layer = zoomLayerRef.current ?? containerRef.current;
@@ -51,17 +67,25 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     const { x, y } = toLocalPoint(e.clientX, e.clientY);
-    if (selectedTool === "text") {
+    if (selectedTool === "pen") {
+      penTool.onClick(x, y);
+    } else if (selectedTool === "text") {
       textTool.onClick(x, y);
     } else if (selectedTool === "move") {
       // clicking empty canvas clears selection
       setSelectedAnnotationId(null);
     }
-  }, [selectedTool, textTool, toLocalPoint, setSelectedAnnotationId]);
+  }, [selectedTool, penTool, textTool, toLocalPoint, setSelectedAnnotationId]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const { x, y } = toLocalPoint(e.clientX, e.clientY);
     if (selectedTool === "line") lineTool.onMouseDown(x, y);
+    if (selectedTool === "marquee") {
+  setMarqueeStart({ x, y });
+  setMarqueeRect({ x, y, w: 0, h: 0 });
+  setIsDrawing(true);
+  return;
+}
     if (selectedTool === "rectangle" || selectedTool === "polygon") rectTool.onMouseDown(x, y);
     if (selectedTool === "brush") brushTool.onMouseDown(x, y);
     if (selectedTool === "move") {
@@ -89,6 +113,17 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
     if (selectedTool === "line") lineTool.onMouseMove(x, y);
     else if (selectedTool === "rectangle" || selectedTool === "polygon") rectTool.onMouseMove(x, y);
     else if (selectedTool === "brush") brushTool.onMouseMove(x, y);
+    else if (selectedTool === "marquee" && isDrawing && marqueeStart) {
+  const w = x - marqueeStart.x;
+  const h = y - marqueeStart.y;
+  setMarqueeRect({
+    x: w < 0 ? x : marqueeStart.x,
+    y: h < 0 ? y : marqueeStart.y,
+    w: Math.abs(w),
+    h: Math.abs(h),
+  });
+  return;
+}
     else if (selectedTool === "move" && interaction) {
       const dx = x - interaction.start.x;
       const dy = y - interaction.start.y;
@@ -96,7 +131,12 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
         if (a.id !== interaction.annId) return a;
         const cloned: Annotation = JSON.parse(JSON.stringify(interaction.original));
         if (interaction.kind === "move") {
-          if (cloned.type === "text" && cloned.properties.position) {
+          if (cloned.type === "polygon" && cloned.properties.points) {
+            cloned.properties.points = cloned.properties.points.map((p: { x: number, y: number }) => ({
+              x: p.x + dx,
+              y: p.y + dy
+            }));
+          } else if (cloned.type === "text" && cloned.properties.position) {
             cloned.properties.position.x += dx;
             cloned.properties.position.y += dy;
           } else if (cloned.type === "rectangle" && cloned.properties.position) {
@@ -131,8 +171,44 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
         }
         return cloned;
       }));
+    } else if (selectedTool === "marquee" && groupSelection.length > 0 && isDrawing) {
+      // On mouse move, calculate dx, dy and move all selected annotations
+      const dx = x - (marqueeStart?.x || 0);
+      const dy = y - (marqueeStart?.y || 0);
+      setAnnotations(prev =>
+        prev.map(a => {
+          if (!groupSelection.includes(a.id)) return a;
+          // Move logic for each type
+          if (a.type === "rectangle" && a.properties.position) {
+            return {
+              ...a,
+              properties: {
+                ...a.properties,
+                position: {
+                  x: a.properties.position.x + dx,
+                  y: a.properties.position.y + dy,
+                },
+              },
+            };
+          }
+          if (a.type === "polygon" && a.properties.points) {
+            return {
+              ...a,
+              properties: {
+                ...a.properties,
+                points: a.properties.points.map(p => ({
+                  x: p.x + dx,
+                  y: p.y + dy,
+                })),
+              },
+            };
+          }
+          // Add similar logic for other types
+          return a;
+        })
+      );
     }
-  }, [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, interaction, setAnnotations]);
+  }, [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, interaction, setAnnotations, groupSelection, marqueeStart]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!isDrawing) return;
@@ -148,6 +224,117 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
 
   const zoomStyle = useMemo(() => ({ transform: `scale(${pixelScale})`, transformOrigin: "top left" as const }), [pixelScale]);
 
+  function renderAnnotation(a: Annotation) {
+    if (selectedTool === "marquee" && isDrawing && marqueeRect) {
+  // Find all annotations whose bounding box is inside marqueeRect
+  const selectedIds = annotations
+    .filter(a => {
+      // Compute bounding box for each annotation type
+      if (a.type === "rectangle" && a.properties.position) {
+        const { x, y } = a.properties.position;
+        const w = a.properties.width || 0;
+        const h = a.properties.height || 0;
+        return (
+          x >= marqueeRect.x &&
+          y >= marqueeRect.y &&
+          x + w <= marqueeRect.x + marqueeRect.w &&
+          y + h <= marqueeRect.y + marqueeRect.h
+        );
+      }
+      if (a.type === "polygon" && a.properties.points) {
+        const xs = a.properties.points.map(p => p.x);
+        const ys = a.properties.points.map(p => p.y);
+        const minX = Math.min(...xs), maxX = Math.max(...xs);
+        const minY = Math.min(...ys), maxY = Math.max(...ys);
+        return (
+          minX >= marqueeRect.x &&
+          minY >= marqueeRect.y &&
+          maxX <= marqueeRect.x + marqueeRect.w &&
+          maxY <= marqueeRect.y + marqueeRect.h
+        );
+      }
+      // Add similar logic for lines, etc.
+      return false;
+    })
+    .map(a => a.id);
+  setGroupSelection(selectedIds);
+  setMarqueeRect(null);
+  setMarqueeStart(null);
+  setIsDrawing(false);
+  return;
+}
+    if (a.type === "polygon") return penTool.render(a);
+    if (a.type === "rectangle" && a.properties.position) {
+      const { x, y } = a.properties.position;
+      const w = a.properties.width || 0;
+      const h = a.properties.height || 0;
+      const style = a.properties.style || {};
+      return (
+        <rect
+          key={a.id}
+          x={x}
+          y={y}
+          width={w}
+          height={h}
+          fill="none"
+          stroke={style.color || "#3B3B3B"}
+          strokeWidth={style.strokeWidth || 2}
+        />
+      );
+    }
+    if (a.type === "line" && a.properties.points && a.properties.points.length >= 2) {
+      const [p1, p2] = a.properties.points;
+      const style = a.properties.style || {};
+      return (
+        <line
+          key={a.id}
+          x1={p1.x}
+          y1={p1.y}
+          x2={p2.x}
+          y2={p2.y}
+          stroke={style.color || "#3B3B3B"}
+          strokeWidth={style.strokeWidth || 2}
+        />
+      );
+    }
+    if (a.type === "path" && a.properties.points) {
+      const style = a.properties.style || {};
+      const d = a.properties.points.reduce(
+        (acc: string, p: { x: number; y: number }, i: number) =>
+          acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`),
+        ""
+      );
+      return (
+        <path
+          key={a.id}
+          d={d}
+          fill="none"
+          stroke={style.color || "#3B3B3B"}
+          strokeWidth={style.strokeWidth || 3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      );
+    }
+    if (a.type === "text" && a.properties.position) {
+      const { x, y } = a.properties.position;
+      const style = a.properties.style || {};
+      return (
+        <text
+          key={a.id}
+          x={x}
+          y={y}
+          fill={style.color || "#3B3B3B"}
+          fontSize={style.fontSize || 16}
+          fontFamily={style.fontFamily || "Inter, system-ui, sans-serif"}
+        >
+          {a.properties.text}
+        </text>
+      );
+    }
+    return null;
+  }
+
   return (
     <div className="flex-1 bg-gray-200 overflow-hidden relative">
       <div className="absolute inset-0 flex items-center justify-center p-4" ref={containerRef}>
@@ -160,8 +347,12 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
+                marqueeRect={marqueeRect}
               >
-                {selectedTool === "line" ? lineTool.preview : (selectedTool === "rectangle" || selectedTool === "polygon") ? rectTool.preview : selectedTool === "brush" ? brushTool.preview : null}
+                {selectedTool === "pen" && penTool.preview}
+                {selectedTool === "line" && lineTool.preview}
+                {(selectedTool === "rectangle" || selectedTool === "polygon") && rectTool.preview}
+                {selectedTool === "brush" && brushTool.preview}
                 {selectedAnnotationId ? (() => {
                   const a = annotations.find(x => x.id === selectedAnnotationId);
                   if (!a) return null;
