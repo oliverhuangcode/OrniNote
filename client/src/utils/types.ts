@@ -65,7 +65,7 @@ export interface ProjectShare {
 
 // UI Types
 export interface AnnotationShape {
-  type: 'point' | 'rectangle' | 'line' | 'polygon';
+  type: 'point' | 'rectangle' | 'line' | 'polygon' | 'pen';
   x: number;
   y: number;
   width?: number;
