@@ -84,6 +84,10 @@ app.post('/api/test-user', async (req, res) => {
   }
 });
 
+// Project routes
+import projectRoutes from './routes/project.js'
+app.use('/api/project', projectRoutes);
+
 // Import and use upload routes
 import uploadRoutes from './routes/upload.js';
 app.use('/api/upload', uploadRoutes);
@@ -99,7 +103,7 @@ app.use((err, req, res, next) => {
 
 // Invite routes 
 import inviteRoutes from './routes/invite.js';
-app.use('/api', inviteRoutes);
+app.use('/api/invite', inviteRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
