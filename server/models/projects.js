@@ -16,7 +16,38 @@ const collaboratorSchema = new Schema({
     type: Date,
     default: Date.now
   }
-}, { _id: false }); 
+}, { _id: false });
+
+const inviteSchema = new Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Please enter a valid email']
+  },
+  role: {
+    type: String,
+    enum: ['Owner', 'Editor', 'Viewer'],
+    required: true,
+    default: 'Viewer'
+  },
+  tokenHash: {
+    type: String,
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ["Pending", "Accepted", "Expired"],
+    default: "Pending",
+  },
+  invitedAt: {
+    type: Date,
+    default: Date.now,
+    expires: "7d", // auto-delete after 7 days
+  },
+});
 
 const projectSchema = new Schema({
   name: {
@@ -36,16 +67,18 @@ const projectSchema = new Schema({
     ref: 'User',
     required: true
   },
-  collaborators: [collaboratorSchema] // array of collaborators
+  collaborators: [collaboratorSchema], // array of collaborators
+  invites: [{ type: Schema.Types.ObjectId, ref: "Invite" }] // array of invited users 
 }, {
   timestamps: true
 });
 
-projectSchema.index({ owner: 1, name: 1 });             
+projectSchema.index({ owner: 1, name: 1 });
 projectSchema.index({ 'collaborators.user': 1 }); // find projects user is in 
-projectSchema.index({ updatedAt: -1 });                  
-projectSchema.index({ owner: 1, updatedAt: -1 });        
+projectSchema.index({ updatedAt: -1 });
+projectSchema.index({ owner: 1, updatedAt: -1 });
 projectSchema.index({ _id: 1, 'collaborators.user': 1 }, { unique: true }); // so then you cant add someone twice
 
 
 export const Project = mongoose.model('Project', projectSchema);
+export const Invite = mongoose.model('Invite', inviteSchema);
