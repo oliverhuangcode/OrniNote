@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/OnboardingPage/Login';
 import Dashboard from './pages/ProjectsPage/Dashboard';
-import Annotation from './pages/AnnotationPage/Annotation';
+import { AnnotationCanvas } from './pages/AnnotationPage/Annotation';
 import './styles/globals.css';
 
 const App: React.FC = () => {
@@ -20,7 +20,7 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           
           {/* Annotation page with dynamic project ID - FIXED PARAMETER NAME */}
-          <Route path="/annotation/:id" element={<Annotation />} />
+          <Route path="/annotation/:id" element={<AnnotationCanvas />} />
           
           {/* Catch-all route - redirects unknown paths to dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
