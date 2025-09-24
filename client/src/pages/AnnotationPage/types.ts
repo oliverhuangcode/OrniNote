@@ -46,6 +46,7 @@ export interface Annotation {
     width?: number; // rectangle width
     height?: number; // rectangle height
     style?: AnnotationStyle;
+    className?: string; // class/category name
   };
 }
 

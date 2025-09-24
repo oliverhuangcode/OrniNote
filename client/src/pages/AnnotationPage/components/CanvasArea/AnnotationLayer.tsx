@@ -23,7 +23,7 @@ interface AnnotationLayerProps {
   onMouseMove: (...args: any[]) => void;
   onMouseUp: (...args: any[]) => void;
   marqueeRect?: { x: number; y: number; w: number; h: number } | null;
-  imageUrl?: string; // <-- add this line
+  imageUrl?: string;
   children?: React.ReactNode;
 }
 
@@ -37,6 +37,55 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
   imageUrl,
   children,
 }) => {
+  const renderAnnotation = (a: Annotation) => {
+    switch (a.type) {
+      case "text":
+        return <TextAnnotation key={a.id} annotation={a} />;
+      
+      case "line":
+        return <LineAnnotation key={a.id} annotation={a} />;
+      
+      case "rectangle":
+        if (!a.properties.position) return null;
+        const rectColor = a.properties.style?.color || "#13ba83";
+        const rectFill = lighten(rectColor, 0.3) + "55";
+        return (
+          <rect
+            key={a.id}
+            x={a.properties.position.x}
+            y={a.properties.position.y}
+            width={a.properties.width}
+            height={a.properties.height}
+            fill={rectFill}
+            stroke={rectColor}
+            strokeWidth={a.properties.style?.strokeWidth || 2}
+          />
+        );
+      
+      case "path":
+        return <PathAnnotation key={a.id} annotation={a} />;
+      
+      case "polygon":
+        if (!a.properties.points) return null;
+        const polygonColor = a.properties.style?.color || "#13ba83";
+        const polygonFill = lighten(polygonColor, 0.3) + "55";
+        return (
+          <polygon
+            key={a.id}
+            points={a.properties.points.map((p: { x: number; y: number }) => `${p.x},${p.y}`).join(" ")}
+            fill={polygonFill}
+            stroke={polygonColor}
+            strokeWidth={a.properties.style?.strokeWidth || 2}
+            pointerEvents="all"
+            cursor="move"
+          />
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <svg
       width="100%"
@@ -47,6 +96,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
+      {/* Background image if provided */}
       {imageUrl && (
         <image
           href={imageUrl}
@@ -57,43 +107,18 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
           preserveAspectRatio="xMidYMid meet"
         />
       )}
+      
+      {/* Render all annotations */}
       {annotations.map(a => (
         <g key={a.id} data-ann-id={a.id}>
-          {a.type === "text" ? <TextAnnotation annotation={a} /> : null}
-          {a.type === "line" ? <LineAnnotation annotation={a} /> : null}
-          {a.type === "rectangle" ? (() => {
-            const color = a.properties.style?.color || "#13ba83";
-            const fill = lighten(color, 0.3) + "55";
-            return (
-              <rect
-                x={a.properties.position?.x}
-                y={a.properties.position?.y}
-                width={a.properties.width}
-                height={a.properties.height}
-                fill={fill}
-                stroke={color}
-                strokeWidth={a.properties.style?.strokeWidth || 2}
-              />
-            );
-          })() : null}
-          {a.type === "path" ? <PathAnnotation annotation={a} /> : null}
-          {a.type === "polygon" ? (() => {
-            const color = a.properties.style?.color || "#13ba83";
-            const fill = lighten(color, 0.3) + "55";
-            return (
-              <polygon
-                points={(a.properties.points ?? []).map((p: { x: number; y: number }) => `${p.x},${p.y}`).join(" ")}
-                fill={fill}
-                stroke={color}
-                strokeWidth={a.properties.style?.strokeWidth || 2}
-                pointerEvents="all"
-                cursor="move"
-              />
-            );
-          })() : null}
+          {renderAnnotation(a)}
         </g>
       ))}
+      
+      {/* Tool previews and selection handles (passed as children from CanvasArea) */}
       {children}
+      
+      {/* Marquee selection rectangle */}
       {marqueeRect && (
         <rect
           x={marqueeRect.x}
@@ -112,5 +137,3 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
 };
 
 export default AnnotationLayer;
-
-
