@@ -73,7 +73,14 @@ const projectSchema = new Schema({
     required: true
   },
   collaborators: [collaboratorSchema], // array of collaborators
-  invites: [{ type: Schema.Types.ObjectId, ref: "Invite" }] // array of invited users 
+  invites: [{ type: Schema.Types.ObjectId, ref: "Invite" }], // array of invited users 
+  images: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Image'
+  }], deletedAt: {
+    type: Date, 
+    default: false 
+  }
 }, {
   timestamps: true
 });
