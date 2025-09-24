@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/OnboardingPage/Login';
 import Dashboard from './pages/ProjectsPage/Dashboard';
-import Annotation from './pages/AnnotationPage/Annotation';
 import AcceptInvite from './components/modals/AcceptInviteModal/AcceptInvite';
+import AnnotationCanvas from './pages/AnnotationPage/Annotation';
 import './styles/globals.css';
 
 const App: React.FC = () => {
@@ -21,7 +21,7 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           
           {/* Annotation page with dynamic project ID - FIXED PARAMETER NAME */}
-          <Route path="/annotation/:id" element={<Annotation />} />
+          <Route path="/annotation/:id" element={<AnnotationCanvas />} />
 
           {/* Accept invite */}
           <Route path="/accept-invite" element={<AcceptInvite />} />

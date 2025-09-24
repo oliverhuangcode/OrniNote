@@ -1,5 +1,4 @@
-// client/src/pages/AnnotationPage/components/TopNav.tsx
-import React from "react";
+import type { User } from "@liveblocks/client";
 import { Link, useNavigate } from "react-router-dom";
 import { ActiveFile } from "../types";
 
@@ -21,6 +20,8 @@ interface TopNavProps {
   onToggleEditMenu: () => void;
   onToggleViewMenu: () => void;
   onCanvasZoom: (direction: "in" | "out" | "reset") => void;
+  others: readonly User<any, any>[];
+  cursorColors: string[];
 }
 
 export default function TopNav({
@@ -41,6 +42,8 @@ export default function TopNav({
   onToggleEditMenu,
   onToggleViewMenu,
   onCanvasZoom,
+  others,
+  cursorColors
 }: TopNavProps) {
   const navigate = useNavigate();
 
@@ -158,13 +161,35 @@ export default function TopNav({
 
       {/* Breadcrumb Navigation */}
       <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <nav className="flex items-center space-x-2 text-sm font-inter">
-          <Link to="/dashboard" className="text-green-600 hover:text-green-800 transition-colors">
-            Dashboard
-          </Link>
-          <span className="text-gray-400"></span>
-          <span className="text-gray-700">Project {projectId}</span>
-        </nav>
+        <div className="flex items-center justify-between">
+          <nav className="flex items-center space-x-2 text-sm font-inter">
+            <Link to="/dashboard" className="text-green-600 hover:text-green-800 transition-colors">
+              Dashboard
+            </Link>
+            <span className="text-gray-400"></span>
+            <span className="text-gray-700">Project {projectId}</span>
+          </nav>
+
+          {/* User Avatars */}
+          {others.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {others.slice(0, 3).map(({ connectionId }) => (
+                  <div
+                    key={connectionId}
+                    className="w-8 h-8 rounded-full border-2 border-white"
+                    style={{ backgroundColor: cursorColors[connectionId % cursorColors.length] }}
+                  />
+                ))}
+                {others.length > 3 && (
+                  <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-500 flex items-center justify-center text-xs text-white font-medium">
+                    +{others.length - 3}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* File Tabs */}

@@ -4,6 +4,8 @@
   "private": true,
   "proxy": "http://localhost:5001",
   "dependencies": {
+    "@liveblocks/client": "^3.3.4",
+    "@liveblocks/react": "^3.3.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.3.0",
