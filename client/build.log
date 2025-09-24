@@ -1,0 +1,21 @@
+
+> client@0.1.0 build
+> react-scripts build
+
+Creating an optimized production build...
+
+warn - The `content` option in your Tailwind CSS configuration is missing or empty.
+warn - Configure your content sources or your generated CSS will be missing styles.
+warn - https://tailwindcss.com/docs/content-configuration
+Failed to compile.
+
+TS2307: Cannot find module '../../utils' or its corresponding type declarations.
+    3 | import { ChevronDown } from "lucide-react";
+    4 |
+  > 5 | import { cn } from "../../utils";
+      |                    ^^^^^^^^^^^^^
+    6 |
+    7 | const Accordion = AccordionPrimitive.Root;
+    8 |
+
+
