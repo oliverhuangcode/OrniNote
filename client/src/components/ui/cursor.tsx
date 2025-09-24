@@ -11,9 +11,8 @@ export default function Cursor({ color, x, y }: Props) {
     <svg
       style={{
         position: "absolute",
-        left: 0,
-        top: 0,
-        transform: `translateX(${x}px) translateY(${y}px)`,
+        left: x,
+        top: y,
       }}
       width="24"
       height="36"

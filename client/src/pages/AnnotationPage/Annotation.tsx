@@ -1,17 +1,58 @@
 import { useState } from "react";
+import { useRef } from "react";  // add this
 import { useParams } from "react-router-dom";
+import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
 import TopNav from "./components/TopNav";
+import Cursor from "../../components/ui/cursor";
 import { ActiveFile, Layer, ToolbarTool } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2 } from "lucide-react";
 import type { Annotation as AnnotationType } from "./types";
+import "../../styles/globals.css";
 
-export default function Annotation() {
+// Define the types for your presence data
+type CursorPosition = {
+  x: number;
+  y: number;
+};
+
+type Presence = {
+  cursor: CursorPosition | null;
+  selectedTool?: string;
+  selectedColor?: string;
+};
+
+// Declare module to extend Liveblocks types
+declare global {
+  interface Liveblocks {
+    Presence: Presence;
+    Storage: {};
+    UserMeta: {};
+    RoomEvent: {};
+  }
+}
+
+const CURSOR_COLORS = [
+  "#E57373",
+  "#9575CD", 
+  "#4FC3F7",
+  "#81C784",
+  // "#FFF176",
+  "#FF8A65",
+  "#F06292",
+  "#7986CB",
+];
+
+function AnnotationCanvas() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const { projectId } = useParams();
+  const [{ cursor }, updateMyPresence] = useMyPresence();
+  const others = useOthers();
+  
   const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([
     { id: "1", name: "Duck.jpg", isActive: true },
     { id: "2", name: "Eagle.jpg", isActive: false },
@@ -25,19 +66,33 @@ export default function Annotation() {
   const [showFileMenu, setShowFileMenu] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [showViewMenu, setShowViewMenu] = useState(false);
-
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
   const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
-  // --- Add this for color palette state ---
+  // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
-  // ----------------------------------------
 
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
+    // Update presence to share selected tool with others
+    updateMyPresence({ 
+      cursor,
+      selectedTool: toolId,
+      selectedColor 
+    });
+  };
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    // Update presence to share selected color with others
+    updateMyPresence({ 
+      cursor,
+      selectedTool,
+      selectedColor: color 
+    });
   };
 
   const handleCanvasZoom = (direction: "in" | "out" | "reset") => {
@@ -45,6 +100,31 @@ export default function Annotation() {
       if (direction === "in") return Math.min(prev + 25, 200);
       if (direction === "out") return Math.max(prev - 25, 25);
       return 100; // reset
+    });
+  };
+
+  // Handle mouse movement to update cursor position
+  const handlePointerMove = (event: React.PointerEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    updateMyPresence({
+      cursor: {
+        x: Math.round(event.clientX - rect.left),
+        y: Math.round(event.clientY - rect.top),
+      },
+      selectedTool,
+      selectedColor,
+    });
+  };
+
+
+  // Handle mouse leave to hide cursor
+  const handlePointerLeave = () => {
+    updateMyPresence({ 
+      cursor: null,
+      selectedTool,
+      selectedColor 
     });
   };
 
@@ -117,7 +197,11 @@ export default function Annotation() {
   };
 
   return (
-    <div className="h-screen bg-white flex flex-col">
+    <div 
+      className="h-screen bg-white flex flex-col "
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+    >
       <TopNav
         projectId={projectId}
         activeFiles={activeFiles}
@@ -136,14 +220,16 @@ export default function Annotation() {
         onToggleEditMenu={() => setShowEditMenu(!showEditMenu)}
         onToggleViewMenu={() => setShowViewMenu(!showViewMenu)}
         onCanvasZoom={handleCanvasZoom}
+        others={others}
+        cursorColors={CURSOR_COLORS}
       />
 
       {/* Main Content */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 relative" ref={containerRef}>
         <LeftToolbar
           tools={toolbarTools}
           selectedColor={selectedColor}
-          onSelectColor={setSelectedColor}
+          onSelectColor={handleColorSelect}
           onSelectTool={handleToolSelect}
         />
         <CanvasArea
@@ -165,6 +251,39 @@ export default function Annotation() {
           onSearchChange={setSearchLayers}
           layers={layers}
         />
+
+        {/* Other users' cursors */}
+        {others.map(({ connectionId, presence }) => {
+          if (!presence?.cursor) return null;
+          
+          return (
+            <div key={`cursor-${connectionId}`} className="absolute pointer-events-none z-50">
+              <Cursor
+                color={CURSOR_COLORS[connectionId % CURSOR_COLORS.length]}
+                x={presence.cursor.x}
+                y={presence.cursor.y}
+              />
+              {/* Show other users' selected tools */}
+              {presence.selectedTool && (
+                <div 
+                  className="absolute bg-black/80 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap"
+                  style={{
+                    left: presence.cursor.x + 20,
+                    top: presence.cursor.y - 30
+                  }}
+                >
+                  Tool: {presence.selectedTool}
+                  {presence.selectedColor && (
+                    <span 
+                      className="inline-block w-3 h-3 rounded-sm ml-2 border border-white/30"
+                      style={{ backgroundColor: presence.selectedColor }}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Modals */}
@@ -183,5 +302,26 @@ export default function Annotation() {
         }}
       />
     </div>
+  );
+}
+
+export default function Annotation() {
+  // Generate a unique room ID based on project ID or use a default
+  const { projectId } = useParams();
+  const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
+
+  return (
+    <LiveblocksProvider publicApiKey="pk_dev_eH0jmBFlrKAt3C8vX8ZZF53cmXb5W6XoCyGx2A9NGCZV3-v2P-gqUav-vAvszF1x">
+      <RoomProvider
+        id={roomId}
+        initialPresence={{ 
+          cursor: null,
+          selectedTool: "move",
+          selectedColor: "#3B3B3B"
+        }}
+      >
+        <AnnotationCanvas />
+      </RoomProvider>
+    </LiveblocksProvider>
   );
 }
