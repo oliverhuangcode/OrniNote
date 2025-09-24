@@ -1,23 +1,32 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/OnboardingPage/Login';
 import Dashboard from './pages/ProjectsPage/Dashboard';
 import Annotation from './pages/AnnotationPage/Annotation';
-import Whiteboard from './pages/AnnotationPage/Whiteboard';
 import './styles/globals.css';
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/annotation" element={<Annotation />} />
-        <Route path="/whiteboard" element={<Whiteboard />} />
-        {/* Catch-all route */}
-        <Route path="*" element={<Dashboard />} />
-      </Routes>
-    </Router>
+    <div className="App">
+      <Router>
+        <Routes>
+          {/* Default route - redirects to dashboard */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          
+          {/* Login page */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Dashboard/Projects page */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* Annotation page with dynamic project ID */}
+          <Route path="/annotation/:id" element={<Annotation />} />
+          
+          {/* Catch-all route - redirects unknown paths to dashboard */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </div>
   );
 };
 
