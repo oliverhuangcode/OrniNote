@@ -15,6 +15,17 @@ export function useShapeTool(
 
   const strokeWidth = options?.strokeWidth || 2;
 
+  // Lighten function for fill color
+  function lighten(hex: string, amt = 0.3) {
+    let c = hex.replace("#", "");
+    if (c.length === 3) c = c.split("").map(x => x + x).join("");
+    const num = parseInt(c, 16);
+    let r = Math.min(255, Math.round(((num >> 16) & 0xff) + 255 * amt));
+    let g = Math.min(255, Math.round(((num >> 8) & 0xff) + 255 * amt));
+    let b = Math.min(255, Math.round((num & 0xff) + 255 * amt));
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  }
+
   const onMouseDown = useCallback((x: number, y: number) => {
     setOrigin({ x, y });
   }, []);
@@ -26,13 +37,14 @@ export function useShapeTool(
       const y0 = Math.min(origin.y, y);
       const w = Math.abs(x - origin.x);
       const h = Math.abs(y - origin.y);
+      const fill = lighten(color, 0.3) + "55"; // lighter, semi-transparent
       setPreview(
         <rect
           x={x0}
           y={y0}
           width={w}
           height={h}
-          fill="none"
+          fill={fill}
           stroke={color}
           strokeWidth={strokeWidth}
           strokeDasharray="4 2"
