@@ -18,25 +18,45 @@ function lighten(hex: string, amt = 0.3) {
 
 interface AnnotationLayerProps {
   annotations: Annotation[];
-  onClick?: (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => void;
-  onMouseDown?: (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => void;
-  onMouseMove?: (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => void;
-  onMouseUp?: (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => void;
-  children?: React.ReactNode; // for previews
-  marqueeRect?: { x: number; y: number; w: number; h: number } | null; // <-- add this
+  onClick: (...args: any[]) => void;
+  onMouseDown: (...args: any[]) => void;
+  onMouseMove: (...args: any[]) => void;
+  onMouseUp: (...args: any[]) => void;
+  marqueeRect?: { x: number; y: number; w: number; h: number } | null;
+  imageUrl?: string; // <-- add this line
+  children?: React.ReactNode;
 }
 
-export default function AnnotationLayer({
+const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
   annotations,
   onClick,
   onMouseDown,
   onMouseMove,
   onMouseUp,
+  marqueeRect,
+  imageUrl,
   children,
-  marqueeRect, // <-- add this
-}: AnnotationLayerProps) {
+}) => {
   return (
-    <svg className="w-full h-full" onClick={onClick} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+    <svg
+      width="100%"
+      height="100%"
+      style={{ display: "block" }}
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+    >
+      {imageUrl && (
+        <image
+          href={imageUrl}
+          x={0}
+          y={0}
+          width="100%"
+          height="100%"
+          preserveAspectRatio="xMidYMid meet"
+        />
+      )}
       {annotations.map(a => (
         <g key={a.id} data-ann-id={a.id}>
           {a.type === "text" ? <TextAnnotation annotation={a} /> : null}
@@ -89,6 +109,8 @@ export default function AnnotationLayer({
       )}
     </svg>
   );
-}
+};
+
+export default AnnotationLayer;
 
 

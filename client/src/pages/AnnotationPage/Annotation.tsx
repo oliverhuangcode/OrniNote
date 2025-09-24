@@ -164,6 +164,7 @@ export default function Annotation() {
           setIsDrawing={setIsDrawing}
           selectedAnnotationId={selectedAnnotationId}
           setSelectedAnnotationId={setSelectedAnnotationId}
+          imageUrl="/bird.jpeg"
         />
         <LayersPanel
           search={searchLayers}

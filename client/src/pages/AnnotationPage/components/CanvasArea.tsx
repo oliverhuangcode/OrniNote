@@ -20,9 +20,10 @@ interface CanvasAreaProps {
   selectedAnnotationId: string | null;
   setSelectedAnnotationId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedColor: string;
+  imageUrl?: string; 
 }
 
-export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotations, setAnnotations, currentAnnotation, setCurrentAnnotation, isDrawing, setIsDrawing, selectedAnnotationId, setSelectedAnnotationId, selectedColor, }: CanvasAreaProps) {
+export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotations, setAnnotations, currentAnnotation, setCurrentAnnotation, isDrawing, setIsDrawing, selectedAnnotationId, setSelectedAnnotationId, selectedColor, imageUrl }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
   const pixelScale = useMemo(() => (zoomPercent / 100), [zoomPercent]);
@@ -348,6 +349,7 @@ export default function CanvasArea({ zoomPercent, onZoom, selectedTool, annotati
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 marqueeRect={marqueeRect}
+                imageUrl={imageUrl}
               >
                 {selectedTool === "pen" && penTool.preview}
                 {selectedTool === "line" && lineTool.preview}
