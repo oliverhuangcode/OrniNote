@@ -5,6 +5,10 @@ import dotenv from 'dotenv';
 import connectToDB from '../config/db.js';
 import { User } from '../models/users.js';
 
+// Import route handlers
+import uploadRoutes from './routes/upload.js';
+import projectRoutes from './routes/project.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -47,7 +51,7 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// Test user creation endpoint (instead of running immediately)
+// Test user creation endpoint
 app.post('/api/test-user', async (req, res) => {
   try {
     // Check if user already exists
@@ -63,9 +67,9 @@ app.post('/api/test-user', async (req, res) => {
     }
 
     const user1 = new User({
-      username: "testingglobalorninoteaccount",
-      password: "orninote",
-      email: "orninote@gmail.com"
+      username: "testingglobalorninoteaccount2",
+      password: "orninote2",
+      email: "orninote2@gmail.com"
     });
     
     const savedUser = await user1.save();
@@ -84,11 +88,11 @@ app.post('/api/test-user', async (req, res) => {
   }
 });
 
-// Import and use upload routes
-import uploadRoutes from './routes/upload.js';
+// API Routes (BEFORE error handlers)
 app.use('/api/upload', uploadRoutes);
+app.use('/api/projects', projectRoutes); 
 
-// Error handling middleware
+// Error handling middleware (AFTER all routes)
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({
@@ -97,7 +101,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// 404 handler (LAST)
 app.use('*', (req, res) => {
   console.log('404 - Route not found:', req.originalUrl);
   res.status(404).json({
@@ -106,6 +110,38 @@ app.use('*', (req, res) => {
   });
 });
 
+async function testUserCreation() {
+  try {
+    console.log('\n📝 Testing user creation...');
+    
+    // Check if user already exists first
+    const existingUser = await User.findOne({ 
+      username: "checkingcombined" 
+    });
+    
+    if (existingUser) {
+      console.log('ℹ️  Test user already exists:', existingUser.username);
+      return;
+    }
+
+    const user1 = new User({
+      username: "checkingcombined",
+      password: "combined",
+      email: "comb@gmail.com"
+    });
+
+    const savedUser = await user1.save();
+    console.log('✅ User created:', {
+      id: savedUser._id,
+      username: savedUser.username,
+      email: savedUser.email,
+      createdAt: savedUser.createdAt
+    });
+  } catch (error) {
+    console.error('❌ User creation failed:', error.message);
+  }
+}
+
 // Start server with database connection
 async function startServer() {
   try {
@@ -113,11 +149,14 @@ async function startServer() {
     await connectToDB();
     console.log('✓ Database connected successfully');
     
+    await testUserCreation();
+
     // Then start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
       console.log(`Test endpoint: http://localhost:${PORT}/api/test`);
+      console.log(`Projects API: http://localhost:${PORT}/api/projects`);
       console.log(`Test user creation: http://localhost:${PORT}/api/test-user (POST)`);
       console.log('AWS Configuration:');
       console.log(` Region: ${process.env.AWS_REGION || 'ap-southeast-2'}`);
