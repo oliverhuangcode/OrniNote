@@ -8,7 +8,7 @@ dist/
 # Logs
 *.log
 
-# Environment variables (for later)
+# Environment variables 
 .env*
 
 # OS
