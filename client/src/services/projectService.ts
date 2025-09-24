@@ -58,9 +58,9 @@ class ProjectService {
   }
 
   /**
-   * Create a new project with image
-   */
-  async createProject(projectData: ProjectData): Promise<Project> {
+ * Create a new project with image upload
+ */
+async createProject(projectData: ProjectData): Promise<Project> {
     try {
       console.log('ProjectService: Creating project with data:', projectData);
       
@@ -88,6 +88,7 @@ class ProjectService {
       throw error;
     }
   }
+
 
   /**
    * Get all projects for a user
