@@ -46,7 +46,7 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
         }));
 
         // Fetch pending invites
-        const pendingMembers = (data.invites || []).map((invite: any) => ({
+        const pendingMembers = (data.invites || []).filter((i: any) => i.status === "Pending").map((invite: any) => ({
           id: invite._id,
           name: invite.email,
           role: invite.role || "Viewer",

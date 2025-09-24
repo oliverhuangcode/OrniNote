@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/OnboardingPage/Login';
 import Dashboard from './pages/ProjectsPage/Dashboard';
 import Annotation from './pages/AnnotationPage/Annotation';
+import AcceptInvite from './components/modals/AcceptInviteModal/AcceptInvite';
 import './styles/globals.css';
 
 const App: React.FC = () => {
@@ -21,6 +22,9 @@ const App: React.FC = () => {
           
           {/* Annotation page with dynamic project ID */}
           <Route path="/annotation/:id" element={<Annotation />} />
+
+          {/* Accept invite */}
+          <Route path="/accept-invite" element={<AcceptInvite />} />
           
           {/* Catch-all route - redirects unknown paths to dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

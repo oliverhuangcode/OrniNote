@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-export async function sendInvite(email, projectName) {
+export async function sendInvite(email, projectName, inviteLink) {
     const msg = {
         from: `"Orninote" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -19,7 +19,7 @@ export async function sendInvite(email, projectName) {
             <p>Hello,</p>
             <p>You've been invited to join the project <strong>${projectName}</strong>.</p>
             <p>
-            Visit <a href="https://orninote.com/invite-accept" style="color: #1a73e8;">here</a> to accept the invitation.
+            Visit <a href="${inviteLink}"> here </a> to accept the invitation.</p>
             </p>
             <p>Thanks,<br/>Orninote Team</p>
         </div>

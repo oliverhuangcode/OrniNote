@@ -1,12 +1,23 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const emailFromInvite = params.get("email") || "";
+  
   const [formData, setFormData] = useState({
-    usernameOrEmail: "",
+    usernameOrEmail: emailFromInvite,
     password: "",
   });
+
+  // Prefill email if query param exists
+  useEffect(() => {
+    if (emailFromInvite) {
+      setFormData(prev => ({ ...prev, usernameOrEmail: emailFromInvite }));
+    }
+  }, [emailFromInvite]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

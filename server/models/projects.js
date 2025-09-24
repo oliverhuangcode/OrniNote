@@ -19,6 +19,11 @@ const collaboratorSchema = new Schema({
 }, { _id: false });
 
 const inviteSchema = new Schema({
+  project: {
+    type: Schema.Types.ObjectId,
+    ref: "Project",
+    required: true
+  },
   email: {
     type: String,
     required: true,
@@ -27,19 +32,19 @@ const inviteSchema = new Schema({
     trim: true,
     match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Please enter a valid email']
   },
+  tokenHash: {
+    type: String,
+    required: true,
+  },
   role: {
     type: String,
     enum: ['Owner', 'Editor', 'Viewer'],
     required: true,
     default: 'Viewer'
   },
-  tokenHash: {
-    type: String,
-    required: true,
-  },
   status: {
     type: String,
-    enum: ["Pending", "Accepted", "Expired"],
+    enum: ["Pending", "Accepted"],
     default: "Pending",
   },
   invitedAt: {
