@@ -24,6 +24,10 @@ interface AnnotationLayerProps {
   onMouseUp: (...args: any[]) => void;
   marqueeRect?: { x: number; y: number; w: number; h: number } | null;
   imageUrl?: string;
+  imageName?: string;
+  imageError?: boolean;
+  onImageLoad?: (e: React.SyntheticEvent<SVGImageElement>) => void;
+  onImageError?: () => void;
   children?: React.ReactNode;
 }
 
@@ -35,6 +39,10 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
   onMouseUp,
   marqueeRect,
   imageUrl,
+  imageName,
+  imageError,
+  onImageLoad,
+  onImageError,
   children,
 }) => {
   const renderAnnotation = (a: Annotation) => {
@@ -65,6 +73,24 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       case "path":
         return <PathAnnotation key={a.id} annotation={a} />;
       
+      case "brush":
+        if (!a.properties.points || a.properties.points.length === 0) return null;
+        const brushColor = a.properties.style?.color || "#13ba83";
+        const pathData = a.properties.points.reduce((path, point, index) => {
+          return index === 0 ? `M ${point.x} ${point.y}` : `${path} L ${point.x} ${point.y}`;
+        }, "");
+        return (
+          <path
+            key={a.id}
+            d={pathData}
+            fill="none"
+            stroke={brushColor}
+            strokeWidth={a.properties.style?.strokeWidth || 3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        );
+      
       case "polygon":
         if (!a.properties.points) return null;
         const polygonColor = a.properties.style?.color || "#13ba83";
@@ -86,6 +112,116 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
     }
   };
 
+  const renderBackground = () => {
+    if (imageUrl) {
+      return (
+        <g>
+          {/* Background for the image area */}
+          <rect width="100%" height="100%" fill="#f9fafb" />
+          
+          {!imageError ? (
+            <image
+              href={imageUrl}
+              x={0}
+              y={0}
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              onLoad={onImageLoad}
+              onError={onImageError}
+            />
+          ) : (
+            <g>
+              {/* Error state */}
+              <rect
+                width="100%"
+                height="100%"
+                fill="#f9fafb"
+                stroke="#d1d5db"
+                strokeWidth={2}
+                strokeDasharray="8 4"
+              />
+              <text
+                x="50%"
+                y="45%"
+                textAnchor="middle"
+                fill="#6b7280"
+                fontSize="24"
+                fontFamily="system-ui, sans-serif"
+              >
+                ⚠️
+              </text>
+              <text
+                x="50%"
+                y="50%"
+                textAnchor="middle"
+                fill="#6b7280"
+                fontSize="14"
+                fontFamily="system-ui, sans-serif"
+              >
+                Failed to load image
+              </text>
+              <text
+                x="50%"
+                y="55%"
+                textAnchor="middle"
+                fill="#9ca3af"
+                fontSize="12"
+                fontFamily="system-ui, sans-serif"
+              >
+                {imageName || 'Unknown file'}
+              </text>
+            </g>
+          )}
+        </g>
+      );
+    } else {
+      // No image placeholder
+      return (
+        <g>
+          <rect
+            width="100%"
+            height="100%"
+            fill="#f9fafb"
+            stroke="#d1d5db"
+            strokeWidth={2}
+            strokeDasharray="8 4"
+          />
+          <text
+            x="50%"
+            y="42%"
+            textAnchor="middle"
+            fill="#6b7280"
+            fontSize="24"
+            fontFamily="system-ui, sans-serif"
+          >
+            📷
+          </text>
+          <text
+            x="50%"
+            y="50%"
+            textAnchor="middle"
+            fill="#6b7280"
+            fontSize="14"
+            fontFamily="system-ui, sans-serif"
+          >
+            No image available
+          </text>
+          <text
+            x="50%"
+            y="55%"
+            textAnchor="middle"
+            fill="#9ca3af"
+            fontSize="12"
+            fontFamily="system-ui, sans-serif"
+          >
+            Upload an image to start annotating
+          </text>
+        </g>
+      );
+    }
+  };
+
   return (
     <svg
       width="100%"
@@ -96,17 +232,8 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
-      {/* Background image if provided */}
-      {imageUrl && (
-        <image
-          href={imageUrl}
-          x={0}
-          y={0}
-          width="100%"
-          height="100%"
-          preserveAspectRatio="xMidYMid meet"
-        />
-      )}
+      {/* Background image or placeholder */}
+      {renderBackground()}
       
       {/* Render all annotations */}
       {annotations.map(a => (

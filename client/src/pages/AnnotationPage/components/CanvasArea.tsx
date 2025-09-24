@@ -7,6 +7,15 @@ import useShapeTool from "./CanvasArea/tools/ShapeTool";
 import useBrushTool from "./CanvasArea/tools/BrushTool";
 import usePenTool from "./CanvasArea/tools/PenTool";
 
+interface ActiveFile {
+  id: string;
+  name: string;
+  isActive: boolean;
+  imageUrl?: string;
+  width?: number;
+  height?: number;
+}
+
 interface CanvasAreaProps {
   zoomPercent: number;
   onZoom: (direction: "in" | "out" | "reset") => void;
@@ -20,7 +29,7 @@ interface CanvasAreaProps {
   selectedAnnotationId: string | null;
   setSelectedAnnotationId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedColor: string;
-  imageUrl?: string; 
+  projectImage?: ActiveFile; // New prop for project image
 }
 
 export default function CanvasArea({ 
@@ -36,13 +45,49 @@ export default function CanvasArea({
   selectedAnnotationId, 
   setSelectedAnnotationId, 
   selectedColor, 
-  imageUrl 
+  projectImage 
 }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
   const pixelScale = useMemo(() => (zoomPercent / 100), [zoomPercent]);
 
-  // Hooked tools
+  // Image loading state
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 800, height: 600 });
+
+  // Handle image load
+  const handleImageLoad = (
+    e: React.SyntheticEvent<HTMLImageElement | SVGImageElement>
+  ) => {
+    const img = e.currentTarget;
+    // SVGImageElement also has naturalWidth/naturalHeight
+    setImageDimensions({
+      width: (img as any).naturalWidth,
+      height: (img as any).naturalHeight
+    });
+    setImageLoaded(true);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoaded(false);
+  };
+
+  // Reset image state when projectImage changes
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+    if (projectImage?.width && projectImage?.height) {
+      setImageDimensions({
+        width: projectImage.width,
+        height: projectImage.height
+      });
+    }
+  }, [projectImage?.imageUrl, projectImage?.width, projectImage?.height]);
+
+  // Tool hooks (from annotation-tools branch)
   const addAnnotation = useCallback((a: Annotation) => setAnnotations(prev => [...prev, a]), [setAnnotations]);
   const textTool = useTextTool(pixelScale, addAnnotation, selectedColor);
   const lineTool = useLineTool(addAnnotation, selectedColor);
@@ -390,65 +435,87 @@ export default function CanvasArea({
     return null;
   }, [selectedAnnotationId, annotations, toLocalPoint, setInteraction, setIsDrawing]);
 
+  // Calculate canvas dimensions based on image or default size
+  const canvasWidth = Math.max(imageDimensions.width, 800);
+  const canvasHeight = Math.max(imageDimensions.height, 600);
+  const scaledWidth = canvasWidth * pixelScale;
+  const scaledHeight = canvasHeight * pixelScale;
+
   const zoomStyle = useMemo(() => ({ 
     transform: `scale(${pixelScale})`, 
-    transformOrigin: "top left" as const 
-  }), [pixelScale]);
+    transformOrigin: "top left" as const,
+    width: canvasWidth,
+    height: canvasHeight,
+  }), [pixelScale, canvasWidth, canvasHeight]);
 
   return (
     <div className="flex-1 bg-gray-200 overflow-hidden relative">
-      <div className="absolute inset-0 flex items-center justify-center p-4" ref={containerRef}>
-        <div className="relative bg-white rounded-lg shadow-2xl overflow-hidden w-full h-full max-w-4xl max-h-full">
-          <div className="relative w-full h-full flex items-center justify-center bg-gray-100">
-            <div ref={zoomLayerRef} className="absolute inset-0" style={zoomStyle}>
-              <AnnotationLayer
-                annotations={annotations}
-                onClick={handleCanvasClick}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                marqueeRect={marqueeRect}
-                imageUrl={imageUrl}
-              >
-                {/* Tool previews */}
-                {selectedTool === "pen" && penTool.preview}
-                {selectedTool === "line" && lineTool.preview}
-                {(selectedTool === "rectangle" || selectedTool === "polygon") && rectTool.preview}
-                {selectedTool === "brush" && brushTool.preview}
-                
-                {/* Selection handles */}
-                {renderSelectionHandles()}
-              </AnnotationLayer>
+      <div className="absolute inset-0 overflow-auto">
+        <div 
+          className="min-h-full flex items-center justify-center p-8"
+          ref={containerRef}
+        >
+          <div className="relative bg-white rounded-lg shadow-2xl overflow-hidden" style={{
+            width: scaledWidth,
+            height: scaledHeight,
+            minWidth: 400 * pixelScale,
+            minHeight: 300 * pixelScale
+          }}>
+            <div className="relative w-full h-full bg-gray-100">
+              <div ref={zoomLayerRef} className="absolute inset-0" style={zoomStyle}>
+                <AnnotationLayer
+                  annotations={annotations}
+                  onClick={handleCanvasClick}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  marqueeRect={marqueeRect}
+                  imageUrl={projectImage?.imageUrl}
+                  imageName={projectImage?.name}
+                  imageError={imageError}
+                  onImageLoad={handleImageLoad}
+                  onImageError={handleImageError}
+                >
+                  {/* Tool previews */}
+                  {selectedTool === "pen" && penTool.preview}
+                  {selectedTool === "line" && lineTool.preview}
+                  {(selectedTool === "rectangle" || selectedTool === "polygon") && rectTool.preview}
+                  {selectedTool === "brush" && brushTool.preview}
+                  
+                  {/* Selection handles */}
+                  {renderSelectionHandles()}
+                </AnnotationLayer>
+              </div>
+              {/* Text tool overlay (rendered outside SVG) */}
+              {selectedTool === "text" ? textTool.overlay : null}
             </div>
-            {/* Text tool overlay (rendered outside SVG) */}
-            {selectedTool === "text" ? textTool.overlay : null}
-          </div>
 
-          {/* Zoom controls */}
-          <div className="absolute top-4 right-4 flex gap-2">
-            <button
-              onClick={() => onZoom("in")}
-              className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100 transition-colors"
-              title="Zoom In"
-            >
-              <span className="text-xs font-bold">+</span>
-            </button>
-            <button
-              onClick={() => onZoom("out")}
-              className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100 transition-colors"
-              title="Zoom Out"
-            >
-              <span className="text-xs font-bold">-</span>
-            </button>
-            <button
-              onClick={() => onZoom("reset")}
-              className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100 transition-colors"
-              title="Reset Zoom"
-            >
-              <span className="text-xs font-bold">⟲</span>
-            </button>
-            <div className="ml-2 px-2 py-1 bg-white bg-opacity-80 rounded border border-gray-300 text-xs font-medium">
-              {zoomPercent}%
+            {/* Zoom controls */}
+            <div className="absolute top-4 right-4 flex gap-2">
+              <button
+                onClick={() => onZoom("in")}
+                className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100 transition-colors"
+                title="Zoom In"
+              >
+                <span className="text-xs font-bold">+</span>
+              </button>
+              <button
+                onClick={() => onZoom("out")}
+                className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100 transition-colors"
+                title="Zoom Out"
+              >
+                <span className="text-xs font-bold">-</span>
+              </button>
+              <button
+                onClick={() => onZoom("reset")}
+                className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100 transition-colors"
+                title="Reset Zoom"
+              >
+                <span className="text-xs font-bold">⟲</span>
+              </button>
+              <div className="ml-2 px-2 py-1 bg-white bg-opacity-80 rounded border border-gray-300 text-xs font-medium">
+                {zoomPercent}%
+              </div>
             </div>
           </div>
         </div>

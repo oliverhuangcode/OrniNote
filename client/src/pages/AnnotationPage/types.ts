@@ -49,27 +49,13 @@ export interface Annotation {
     text?: string; // for text annotations
     width?: number; // rectangle width
     height?: number; // rectangle height
-    style?: AnnotationStyle;
+    style?: Style;
     className?: string; // class/category name
     // Basic coordinates (used by some annotation types)
     x?: number;
     y?: number;
-    width?: number;
-    height?: number;
-    
-    // Position object (used by text and shapes)
-    position?: Position;
-    
-    // Points array (used by lines, brushes, polygons)
-    points?: Point[];
-    
-    // Text content (used by text annotations)
-    text?: string;
     
     // Legacy color property (kept for backward compatibility)
     color?: string;
-    
-    // Style object (used by most annotation types)
-    style?: Style;
   };
 }
