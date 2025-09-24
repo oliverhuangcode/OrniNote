@@ -19,7 +19,7 @@ const App: React.FC = () => {
           {/* Dashboard/Projects page */}
           <Route path="/dashboard" element={<Dashboard />} />
           
-          {/* Annotation page with dynamic project ID */}
+          {/* Annotation page with dynamic project ID - FIXED PARAMETER NAME */}
           <Route path="/annotation/:id" element={<Annotation />} />
           
           {/* Catch-all route - redirects unknown paths to dashboard */}

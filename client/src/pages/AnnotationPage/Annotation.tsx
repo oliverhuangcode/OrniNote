@@ -1,4 +1,5 @@
-import { useState } from "react";
+// client/src/pages/AnnotationPage/Annotation.tsx
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
@@ -9,13 +10,48 @@ import TopNav from "./components/TopNav";
 import { ActiveFile, Layer, ToolbarTool } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
 import type { Annotation as AnnotationType } from "./types";
+import { projectService } from "../../services/projectService";
+
+interface ProjectData {
+  _id: string;
+  name: string;
+  description: string;
+  owner: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  images: Array<{
+    _id: string;
+    filename: string;
+    url: string;
+    width: number;
+    height: number;
+    uploadedAt: string;
+  }>;
+  collaborators: Array<{
+    user: {
+      _id: string;
+      username: string;
+      email: string;
+    };
+    role: string;
+    addedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function Annotation() {
-  const { projectId } = useParams();
-  const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([
-    { id: "1", name: "Duck.jpg", isActive: true },
-    { id: "2", name: "Eagle.jpg", isActive: false },
-  ]);
+  const { id: projectId } = useParams();
+  
+  // Project data state
+  const [project, setProject] = useState<ProjectData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Active files based on project images
+  const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [searchLayers, setSearchLayers] = useState("");
@@ -31,10 +67,54 @@ export default function Annotation() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
-  // --- Add this for color palette state ---
+  // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
-  // ----------------------------------------
+
+  // Load project data on mount
+  useEffect(() => {
+    if (projectId) {
+      loadProject();
+    }
+  }, [projectId]);
+
+  const loadProject = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (!projectId) {
+        throw new Error('Project ID is required');
+      }
+
+      console.log('Loading project with ID:', projectId);
+      const projectData = await projectService.getProject(projectId);
+      console.log('Project data loaded:', projectData);
+      setProject(projectData);
+
+      // Set up active files based on project images
+      if (projectData.images && projectData.images.length > 0) {
+        const files: ActiveFile[] = projectData.images.map((image, index) => ({
+          id: image._id,
+          name: image.filename,
+          isActive: index === 0, // First image is active by default
+          imageUrl: image.url,
+          width: image.width,
+          height: image.height
+        }));
+        setActiveFiles(files);
+      } else {
+        // No images in project
+        setActiveFiles([]);
+      }
+
+    } catch (err) {
+      console.error('Failed to load project:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load project');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
@@ -101,18 +181,20 @@ export default function Annotation() {
     },
   ];
 
+  // Dynamic layers - start with empty and allow users to create as needed
   const layers: Layer[] = [
-    { id: "1", name: "Bounding Boxes (1)", visible: true, locked: false },
-    { id: "2", name: "Neck Lines (1)", color: "#5CBF7D", visible: true, locked: false },
-    { id: "3", name: "Body Lines (1)", visible: true, locked: false },
-    { id: "4", name: "Tail Lines (1)", visible: true, locked: false },
-    { id: "5", name: "Beak Lines (1)", visible: true, locked: false },
-    { id: "6", name: "Left Leg Lines (2)", visible: true, locked: false },
-    { id: "7", name: "Right Leg Lines (2)", visible: true, locked: false },
+    { id: "1", name: "Annotations", visible: true, locked: false },
   ];
 
   const closeFile = (fileId: string) => {
-    setActiveFiles(prev => prev.filter(file => file.id !== fileId));
+    setActiveFiles(prev => {
+      const newFiles = prev.filter(file => file.id !== fileId);
+      // If we closed the active file, make the first remaining file active
+      if (newFiles.length > 0 && !newFiles.some(f => f.isActive)) {
+        newFiles[0].isActive = true;
+      }
+      return newFiles;
+    });
   };
 
   const switchFile = (fileId: string) => {
@@ -120,6 +202,51 @@ export default function Annotation() {
       prev.map(file => ({ ...file, isActive: file.id === fileId }))
     );
   };
+
+  // Get current active file
+  const activeFile = activeFiles.find(file => file.isActive);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-semibold text-gray-900 mb-2">Loading Project...</div>
+          <div className="text-gray-500">Please wait while we load your annotation project.</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-semibold text-red-600 mb-2">Error Loading Project</div>
+          <div className="text-gray-500 mb-4">{error}</div>
+          <button
+            onClick={loadProject}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // No project found
+  if (!project) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-semibold text-gray-900 mb-2">Project Not Found</div>
+          <div className="text-gray-500">The requested project could not be found.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-white flex flex-col">
@@ -164,7 +291,7 @@ export default function Annotation() {
           setIsDrawing={setIsDrawing}
           selectedAnnotationId={selectedAnnotationId}
           setSelectedAnnotationId={setSelectedAnnotationId}
-          imageUrl="/bird.jpeg"
+          projectImage={activeFile} // Pass the active file/image data
         />
         <LayersPanel
           search={searchLayers}
@@ -177,15 +304,15 @@ export default function Annotation() {
       <ShareProject
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        projectName="Duck Annotation"
+        projectName={project.name}
       />
       <Export
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         projectData={{
-          name: "Duck",
+          name: project.name,
           annotations: {},
-          image: "duck.jpg"
+          image: activeFile?.imageUrl || ""
         }}
       />
     </div>

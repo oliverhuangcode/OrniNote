@@ -36,7 +36,14 @@ const projectSchema = new Schema({
     ref: 'User',
     required: true
   },
-  collaborators: [collaboratorSchema] // array of collaborators
+  collaborators: [collaboratorSchema], // array of collaborators
+  images: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Image'
+  }], deletedAt: {
+    type: Date, 
+    default: false 
+  }
 }, {
   timestamps: true
 });
