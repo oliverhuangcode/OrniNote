@@ -1,14 +1,14 @@
 // server/src/routes/upload.js
-const express = require('express');
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { v4: uuidv4 } = require('uuid');
+import express from 'express';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
 // Configure S3 client
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'ap-southeast-2', // Make sure this matches your bucket region
+  region: process.env.AWS_REGION || 'ap-southeast-2',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -23,14 +23,12 @@ router.post('/presigned-url', async (req, res) => {
   try {
     const { fileName, fileType } = req.body;
 
-    // Validate input
     if (!fileName || !fileType) {
       return res.status(400).json({
         error: 'fileName and fileType are required',
       });
     }
 
-    // Validate file type
     const allowedTypes = [
       'image/jpeg',
       'image/jpg',
@@ -46,16 +44,13 @@ router.post('/presigned-url', async (req, res) => {
       });
     }
 
-    // Generate unique key
     const fileExtension = fileName.split('.').pop() || 'jpg';
     const uniqueKey = `projects/${uuidv4()}-${Date.now()}.${fileExtension}`;
 
-    // Create the put object command - REMOVED ACL
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: uniqueKey,
       ContentType: fileType,
-      // ACL: 'public-read', // REMOVED - This causes 403 errors if bucket doesn't allow ACLs
     });
 
     console.log('Creating presigned URL with params:', {
@@ -65,19 +60,15 @@ router.post('/presigned-url', async (req, res) => {
       region: process.env.AWS_REGION || 'ap-southeast-2'
     });
 
-    // Generate pre-signed URL
     const uploadUrl = await getSignedUrl(s3Client, command, {
-      expiresIn: 3600, // 1 hour
+      expiresIn: 3600,
     });
 
-    // Generate the final image URL
     const imageUrl = CLOUDFRONT_DOMAIN
       ? `${CLOUDFRONT_DOMAIN}/${uniqueKey}`
       : `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'ap-southeast-2'}.amazonaws.com/${uniqueKey}`;
 
-    console.log('✅ Generated presigned URL for:', fileName);
-    console.log('📍 Upload URL domain:', uploadUrl.split('?')[0]);
-    console.log('🖼️  Final image URL:', imageUrl);
+    console.log('Generated presigned URL for:', fileName);
 
     res.json({
       uploadUrl,
@@ -86,7 +77,7 @@ router.post('/presigned-url', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error generating pre-signed URL:', error);
+    console.error('Error generating pre-signed URL:', error);
     res.status(500).json({
       error: 'Failed to generate upload URL',
       details: error.message
@@ -94,44 +85,9 @@ router.post('/presigned-url', async (req, res) => {
   }
 });
 
-// DELETE /api/upload/image/:key - Fixed to use DeleteObjectCommand
-router.delete('/image/:key(*)', async (req, res) => {
-  try {
-    const { key } = req.params;
-
-    if (!key) {
-      return res.status(400).json({
-        error: 'Image key is required',
-      });
-    }
-
-    // Use DeleteObjectCommand instead of PutObjectCommand
-    const command = new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key,
-    });
-
-    await s3Client.send(command);
-    console.log('✅ Deleted image:', key);
-
-    res.json({
-      success: true,
-      message: 'Image deleted successfully',
-    });
-
-  } catch (error) {
-    console.error('❌ Error deleting image:', error);
-    res.status(500).json({
-      error: 'Failed to delete image',
-      details: error.message
-    });
-  }
-});
-
-// GET /api/upload/test - Test route to verify S3 connection
+// GET /api/upload/test
 router.get('/test', async (req, res) => {
   try {
-    // Try to create a presigned URL to test connection
     const testKey = `test/${Date.now()}.txt`;
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
@@ -143,14 +99,13 @@ router.get('/test', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'S3 connection successful! ✅',
+      message: 'S3 connection successful!',
       bucket: BUCKET_NAME,
       region: process.env.AWS_REGION || 'ap-southeast-2',
-      testPresignedUrl: url.split('?')[0] + '?[PARAMS_HIDDEN]' // Hide params for security
     });
 
   } catch (error) {
-    console.error('❌ S3 test failed:', error);
+    console.error('S3 test failed:', error);
     res.status(500).json({
       success: false,
       error: 'S3 connection failed',
@@ -159,16 +114,4 @@ router.get('/test', async (req, res) => {
   }
 });
 
-// GET /api/upload/debug - Debug route to check configuration
-router.get('/debug', (req, res) => {
-  res.json({
-    bucket: BUCKET_NAME || 'NOT_SET',
-    region: process.env.AWS_REGION || 'ap-southeast-2',
-    cloudfront: CLOUDFRONT_DOMAIN || 'NOT_SET',
-    accessKeySet: !!process.env.AWS_ACCESS_KEY_ID,
-    secretKeySet: !!process.env.AWS_SECRET_ACCESS_KEY,
-    nodeEnv: process.env.NODE_ENV || 'development'
-  });
-});
-
-module.exports = router;
+export default router;
