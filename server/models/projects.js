@@ -41,8 +41,7 @@ const projectSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Image'
   }], deletedAt: {
-    type: Date, 
-    default: false 
+    type: Date
   }
 }, {
   timestamps: true
