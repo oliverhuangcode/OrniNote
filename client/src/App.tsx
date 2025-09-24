@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/OnboardingPage/Login';
 import Dashboard from './pages/ProjectsPage/Dashboard';
 import AcceptInvite from './components/modals/AcceptInviteModal/AcceptInvite';
-import AnnotationCanvas from './pages/AnnotationPage/Annotation';
+import {AnnotationCanvas} from './pages/AnnotationPage/Annotation';
 import './styles/globals.css';
 
 const App: React.FC = () => {

@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
+import { ActiveFile, Layer, ToolbarTool } from "./types";
+import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
+import { projectService } from "../../services/projectService";
+import type { Annotation as AnnotationType } from "./types";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
 import LeftToolbar from "./components/LeftToolbar";
@@ -8,11 +12,7 @@ import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
 import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
-import { ActiveFile, Layer, ToolbarTool } from "./types";
-import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
-import type { Annotation as AnnotationType } from "./types";
 import "../../styles/globals.css";
-import { projectService } from "../../services/projectService";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -421,7 +421,7 @@ export default function Annotation() {
       <ShareProject
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        projectName={project.name}
+        projectId="68bfc904bd72f37e0fa863ec"
       />
       <Export
         isOpen={showExportModal}
@@ -438,7 +438,7 @@ export default function Annotation() {
 
 export function AnnotationCanvas() {
   // Generate a unique room ID based on project ID or use a default
-  const { projectId } = useParams();
+  const { id: projectId } = useParams();
   const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
 
   return (
