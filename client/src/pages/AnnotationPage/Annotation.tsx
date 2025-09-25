@@ -333,7 +333,7 @@ export default function Annotation() {
       onPointerLeave={handlePointerLeave}
     >
       <TopNav
-        projectId={projectId}
+        projectName={project.name}
         activeFiles={activeFiles}
         showShareModal={showShareModal}
         showExportModal={showExportModal}
@@ -421,14 +421,15 @@ export default function Annotation() {
       <ShareProject
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        projectId="68bfc904bd72f37e0fa863ec"
+        projectId={project._id}
+        projectName={project.name}
       />
       <Export
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         projectData={{
           name: project.name,
-          annotations: {},
+          annotations: annotations,
           image: activeFile?.imageUrl || ""
         }}
       />

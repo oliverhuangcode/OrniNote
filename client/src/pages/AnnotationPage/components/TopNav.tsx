@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ActiveFile } from "../types";
 
 interface TopNavProps {
-  projectId?: string;
+  projectName?: string;
   activeFiles: ActiveFile[];
   showShareModal: boolean;
   showExportModal: boolean;
@@ -25,7 +25,7 @@ interface TopNavProps {
 }
 
 export default function TopNav({
-  projectId,
+  projectName,
   activeFiles,
   showShareModal,
   showExportModal,
@@ -122,7 +122,7 @@ export default function TopNav({
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Annotation menu")}>Annotation</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Layers menu")}>Layers</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Tools menu")}>Tools</button>
-            <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={onShowShareModal}>Collaboration</button>
+            <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={onShowShareModal}>Share</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Settings menu")}>Settings</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Help menu")}>Help</button>
           </div>
@@ -167,7 +167,7 @@ export default function TopNav({
               Dashboard
             </Link>
             <span className="text-gray-400"></span>
-            <span className="text-gray-700">Project {projectId}</span>
+            <span className="text-gray-700">Project {projectName}</span>
           </nav>
 
           {/* User Avatars */}

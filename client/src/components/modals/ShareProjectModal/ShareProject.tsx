@@ -31,12 +31,15 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
     if (!isOpen) return;
 
 
-    fetch(`/api/project/${projectId}`)  
+    fetch(`/api/projects/${projectId}`)  
       .then(res => res.json())
       .then(data => {
+
+        // Extract project 
+        const project = data.project;
         
         // Fetch active collaborators
-        const activeMembers = data.collaborators.map((c: any) => ({
+        const activeMembers = project.collaborators.map((c: any) => ({
           id: c.user._id,
           name: c.user.username,
           role: c.role,
@@ -46,7 +49,7 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
         }));
 
         // Fetch pending invites
-        const pendingMembers = (data.invites || []).filter((i: any) => i.status === "Pending").map((invite: any) => ({
+        const pendingMembers = (project.invites || []).filter((i: any) => i.status === "Pending").map((invite: any) => ({
           id: invite._id,
           name: invite.email,
           role: invite.role || "Viewer",
@@ -106,7 +109,7 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
 
   const handleRoleChange = async (memberId: string, newRole: "Editor" | "Viewer") => {
     try {
-      const response = await fetch(`/api/project/${projectId}/collaborators/${memberId}`, {
+      const response = await fetch(`/api/projects/${projectId}/collaborators/${memberId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
@@ -236,7 +239,7 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {member.role === "Owner" ? (
+                {member.role === "Owner" || member.status === "Pending"? (
                   <span className="font-inter text-gray-500 text-sm">{member.role}</span>
                 ) : (
                   <div className="relative">
