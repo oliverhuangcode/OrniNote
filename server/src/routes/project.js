@@ -1,16 +1,77 @@
 // server/src/routes/project.js
-import express from 'express';
-import { Project } from '../../models/projects.js';
+import express from "express";
+import { Project } from "../../models/projects.js";
 import { Image } from '../../models/images.js';
 import { User } from '../../models/users.js';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-const s3 = new S3Client({ region: process.env.AWS_REGION });
+
 
 const router = express.Router();
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+
 
 // Simple test route
 router.get('/test', (req, res) => {
   res.json({ message: 'Projects route is working!' });
+});
+
+// Get a specific project
+router.get('/:projectId', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findById(projectId)
+      .populate('owner', 'username email')
+      .populate('images')
+      .populate('collaborators.user', 'username email')
+      .populate("invites");
+
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found'
+      });
+    }
+
+    res.json({
+      project
+    });
+
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project',
+      message: error.message
+    });
+  }
+});
+
+// Update collaborator role
+router.patch("/:projectId/collaborators/:memberId", async (req, res) => {
+    try {
+        const { projectId, memberId } = req.params;
+        const { role } = req.body;
+
+        const project = await Project.findById(projectId);
+        if (!project) {
+            return res.status(404).json({ success: false, message: "Project not found" });
+        }
+
+        const collaborator = project.collaborators.find(
+            (c) => c.user.toString() === memberId
+        );
+
+        if (!collaborator) {
+            return res.status(404).json({ success: false, message: "Collaborator not found" });
+        }
+
+        collaborator.role = role;
+        await project.save();
+
+        res.json({ success: true, message: "Role updated", project });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Failed to update role" });
+    }
 });
 
 // Create a new project with image
@@ -132,34 +193,6 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// Get a specific project
-router.get('/:projectId', async (req, res) => {
-  try {
-    const { projectId } = req.params;
-
-    const project = await Project.findById(projectId)
-      .populate('owner', 'username email')
-      .populate('images')
-      .populate('collaborators.user', 'username email');
-
-    if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
-    }
-
-    res.json({
-      project
-    });
-
-  } catch (error) {
-    console.error('Error fetching project:', error);
-    res.status(500).json({
-      error: 'Failed to fetch project',
-      message: error.message
-    });
-  }
-});
 
 // Update project
 router.put('/:projectId', async (req, res) => {

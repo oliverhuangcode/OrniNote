@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3"; 
+  const CURRENT_USER_ID = "68ceb5ef7fdc767b16f6fc1d"; 
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       
-      const backendProjects = await projectService.getUserProjects(CURRENT_USER_ID, );
+      const backendProjects = await projectService.getUserProjects(CURRENT_USER_ID);
       
       // Convert backend projects to dashboard card format
       const formattedProjects = backendProjects.map(project => 

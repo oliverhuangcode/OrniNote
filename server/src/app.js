@@ -8,6 +8,7 @@ import { User } from '../models/users.js';
 // Import route handlers
 import uploadRoutes from './routes/upload.js';
 import projectRoutes from './routes/project.js';
+import inviteRoutes from './routes/invite.js';
 
 // Load environment variables
 dotenv.config();
@@ -55,10 +56,10 @@ app.get('/api/test', (req, res) => {
 app.post('/api/test-user', async (req, res) => {
   try {
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      username: "testingglobalorninoteaccount" 
+    const existingUser = await User.findOne({
+      username: "testingglobalorninoteaccount"
     });
-    
+
     if (existingUser) {
       return res.json({
         message: 'Test user already exists',
@@ -71,10 +72,10 @@ app.post('/api/test-user', async (req, res) => {
       password: "orninote2",
       email: "orninote2@gmail.com"
     });
-    
+
     const savedUser = await user1.save();
     console.log('User created:', savedUser);
-    
+
     res.json({
       message: 'Test user created successfully',
       user: savedUser
@@ -90,7 +91,8 @@ app.post('/api/test-user', async (req, res) => {
 
 // API Routes (BEFORE error handlers)
 app.use('/api/upload', uploadRoutes);
-app.use('/api/projects', projectRoutes); 
+app.use('/api/projects', projectRoutes);
+app.use('/api/invite', inviteRoutes);
 
 // Error handling middleware (AFTER all routes)
 app.use((err, req, res, next) => {
@@ -113,12 +115,12 @@ app.use('*', (req, res) => {
 async function testUserCreation() {
   try {
     console.log('\n📝 Testing user creation...');
-    
+
     // Check if user already exists first
-    const existingUser = await User.findOne({ 
-      username: "checkingcombined" 
+    const existingUser = await User.findOne({
+      username: "checkingcombined"
     });
-    
+
     if (existingUser) {
       console.log('ℹ️  Test user already exists:', existingUser.username);
       return;
@@ -148,8 +150,6 @@ async function startServer() {
     // Connect to MongoDB first
     await connectToDB();
     console.log('✓ Database connected successfully');
-    
-    await testUserCreation();
 
     // Then start the server
     app.listen(PORT, () => {

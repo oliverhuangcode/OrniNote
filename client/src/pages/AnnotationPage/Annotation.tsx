@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
+import { ActiveFile, Layer, ToolbarTool } from "./types";
+import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
+import { projectService } from "../../services/projectService";
+import type { Annotation as AnnotationType } from "./types";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
 import LeftToolbar from "./components/LeftToolbar";
@@ -8,11 +12,7 @@ import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
 import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
-import { ActiveFile, Layer, ToolbarTool } from "./types";
-import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
-import type { Annotation as AnnotationType } from "./types";
 import "../../styles/globals.css";
-import { projectService } from "../../services/projectService";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -333,7 +333,7 @@ export default function Annotation() {
       onPointerLeave={handlePointerLeave}
     >
       <TopNav
-        projectId={projectId}
+        projectName={project.name}
         activeFiles={activeFiles}
         showShareModal={showShareModal}
         showExportModal={showExportModal}
@@ -421,6 +421,7 @@ export default function Annotation() {
       <ShareProject
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
+        projectId={project._id}
         projectName={project.name}
       />
       <Export
@@ -428,7 +429,7 @@ export default function Annotation() {
         onClose={() => setShowExportModal(false)}
         projectData={{
           name: project.name,
-          annotations: {},
+          annotations: annotations,
           image: activeFile?.imageUrl || ""
         }}
       />
@@ -438,7 +439,7 @@ export default function Annotation() {
 
 export function AnnotationCanvas() {
   // Generate a unique room ID based on project ID or use a default
-  const { projectId } = useParams();
+  const { id: projectId } = useParams();
   const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
 
   return (

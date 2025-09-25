@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ShareProjectProps {
   isOpen: boolean;
   onClose: () => void;
+  projectId: string;
   projectName?: string;
 }
 
@@ -12,33 +13,125 @@ interface TeamMember {
   role: "Owner" | "Editor" | "Viewer";
   color: string;
   initial: string;
+  status: "Pending" | "Active";
 }
 
-const initialTeamMembers: TeamMember[] = [
-  { id: "1", name: "John Doe", role: "Owner", color: "#6ED875", initial: "J" },
-  { id: "2", name: "Jane Doe", role: "Editor", color: "#3A96FF", initial: "J" },
-  { id: "3", name: "Joe Doe", role: "Viewer", color: "#F39A4D", initial: "J" },
-];
+type ShareRole = "Viewer" | "Editor";
+const RoleOptions: ShareRole[] = ["Viewer", "Editor"];
 
-export default function ShareProject({ isOpen, onClose, projectName = "Project" }: ShareProjectProps) {
+export default function ShareProject({ isOpen, onClose, projectId, projectName}: ShareProjectProps) {
   const [email, setEmail] = useState("");
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<TeamMember[]>([]);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
-  const handleInvite = () => {
-    if (email.trim()) {
-      console.log("Inviting:", email);
-      setEmail("");
+  // Fetches from backend when project changes 
+  useEffect(() => {
+    if (!isOpen) return;
+
+
+    fetch(`/api/projects/${projectId}`)  
+      .then(res => res.json())
+      .then(data => {
+
+        // Extract project 
+        const project = data.project;
+        
+        // Fetch active collaborators
+        const activeMembers = project.collaborators.map((c: any) => ({
+          id: c.user._id,
+          name: c.user.username,
+          role: c.role,
+          color: "#3A96FF", 
+          initial: c.user.username.charAt(0).toUpperCase(),
+          status: "Active",
+        }));
+
+        // Fetch pending invites
+        const pendingMembers = (project.invites || []).filter((i: any) => i.status === "Pending").map((invite: any) => ({
+          id: invite._id,
+          name: invite.email,
+          role: invite.role || "Viewer",
+          color: "#A0AEC0",
+          initial: invite.email.charAt(0).toUpperCase(),
+          status: "Pending",
+        }));
+        
+        setTeamMembers(activeMembers);
+        setPendingInvites(pendingMembers);
+      })
+      .catch(err => console.error("Failed to fetch project:", err));
+  }, [isOpen, projectId]);
+
+  const handleInvite = async () => {
+    if (!email.trim()) return;
+
+    try {
+      // Send invite request to backend
+      const response = await fetch('/api/invite', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          projectId,
+          projectName
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Invitation sent!");
+
+        // Add pending invite to UI
+        setPendingInvites(prev => [
+          ...prev,
+          {
+            id: result.inviteId,
+            name: email,
+            role: "Viewer",
+            color: "#A0AEC0", // gray for pending members
+            initial: email.charAt(0).toUpperCase(),
+            status: "Pending"
+          },
+        ]);
+
+        setEmail(""); // clear input
+      } else {
+        alert("Failed to send invite: " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error sending invitation.");
     }
   };
 
-  const handleRoleChange = (memberId: string, newRole: "Editor" | "Viewer") => {
-    setTeamMembers(prev => 
-      prev.map(member => 
-        member.id === memberId ? { ...member, role: newRole } : member
-      )
-    );
-  };
+  const handleRoleChange = async (memberId: string, newRole: "Editor" | "Viewer") => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/collaborators/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      const result = await response.json();
+
+      // Update UI
+      if (result.success){
+        setTeamMembers(prev =>
+          prev.map(member =>
+            member.id === memberId ? { ...member, role: newRole } : member
+          )
+        );
+      } else {
+        alert("Failed to update role: " + (result.message || result.error));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating role");
+    }
+};
 
   const handleCopyLink = async () => {
     try {
@@ -131,7 +224,7 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
 
         {/* Team Members */}
         <div className="space-y-4">
-          {teamMembers.map((member) => (
+          {[...teamMembers, ...pendingInvites].map((member) => (
             <div key={member.id} className="flex items-center gap-3">
               <div 
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white font-inter font-medium"
@@ -141,25 +234,57 @@ export default function ShareProject({ isOpen, onClose, projectName = "Project" 
               </div>
               <div className="flex-1">
                 <span className="font-inter text-sm text-black">{member.name}</span>
+                {member.status === "Pending" && (
+                  <span className="text-xs text-gray-500 ml-2">Pending</span>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                {member.role === "Owner" ? (
+                {member.role === "Owner" || member.status === "Pending"? (
                   <span className="font-inter text-gray-500 text-sm">{member.role}</span>
                 ) : (
                   <div className="relative">
-                    <select
-                      value={member.role}
-                      onChange={(e) => handleRoleChange(member.id, e.target.value as "Editor" | "Viewer")}
-                      className="appearance-none bg-white border border-gray-300 rounded px-3 py-1 font-inter text-black focus:outline-none focus:ring-2 focus:ring-highlight pr-8"
+                    <button
+                      onClick={() =>
+                        setOpenDropdownId(openDropdownId === member.id ? null : member.id)
+                      }
+                      className="w-fit flex items-center justify-between px-4 py-2 gap-2 text-sm bg-white border border-gray-300 rounded-lg font-inter text-gray-600 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-ml-green"
                     >
-                      <option value="Editor">Editor</option>
-                      <option value="Viewer">Viewer</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
-                      <svg width="12" height="7" viewBox="0 0 12 7" fill="none">
-                        <path d="M1.13623 1.12451L5.79532 5.77849L10.4544 1.12451" stroke="black" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                      <span>{member.role}</span>
+                      <svg
+                        width="12"
+                        height="7"
+                        viewBox="0 0 12 7"
+                        fill="none"
+                        className={`transform transition-transform ${
+                          openDropdownId === member.id ? "rotate-180" : ""
+                        }`}
+                      >
+                        <path
+                          d="M1.13623 1.51208L5.79532 6.20066L10.4544 1.51208"
+                          stroke="black"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
-                    </div>
+                    </button>
+
+                    {openDropdownId === member.id && (
+                      <div className="absolute top-full left-0 right-0 mt-1 text-sm bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                        {RoleOptions.map((role) => (
+                          <button
+                            key={role}
+                            onClick={() => {
+                              handleRoleChange(member.id, role as "Editor" | "Viewer");
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full px-4 py-3 text-left font-inter text-gray-800 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
+                          >
+                            {role}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
