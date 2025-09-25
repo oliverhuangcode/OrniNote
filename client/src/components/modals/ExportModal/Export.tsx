@@ -5,8 +5,8 @@ interface ExportProps {
   onClose: () => void;
   projectData?: {
     name: string;
-    annotations: any;
     image?: string;
+    annotations: any[]; // annotationSchema objects
   };
 }
 
@@ -26,47 +26,48 @@ export default function Export({ isOpen, onClose, projectData }: ExportProps) {
   const [showPagesDropdown, setShowPagesDropdown] = useState(false);
   const [customPages, setCustomPages] = useState("");
 
-  const generateExportData = () => {
-    const exportData = {
-      image_id: `${projectData?.name || "untitled"}.jpg`,
-      annotations: [
-        {
-          id: 1,
-          label: "duck",
-          anatomy: {
-            beak: {
-              start: [160, 90],
-              end: [210, 95],
-              description: "upper beak ridge"
-            }
-          },
-          spine: {
-            start: [150, 100],
-            end: [150, 200],
-            description: "central spine from neck to tail base"
-          },
-          torso: {
-            start: [120, 120],
-            end: [160, 180],
-            description: "approximate width and depth of body"
-          },
-          left_foot: {
-            start: [140, 200],
-            end: [130, 230],
-            description: "left leg to foot"
-          },
-          right_foot: {
-            start: [160, 200],
-            end: [170, 230],
-            description: "right leg to foot"
-          }
+  // Map annotationSchema to exportable format
+  const mapAnnotationForExport = (ann: any) => ({
+    id: ann._id || ann.id,
+    labelId: ann.labelId,
+    createdBy: ann.createdBy,
+    type: ann.shapeData.type,
+    coordinates: ann.shapeData.coordinates,
+    page: ann.page ?? 1 // optional page field for custom page export
+  });
+
+  // Filter annotations based on page selection
+  const getFilteredAnnotations = () => {
+    if (!projectData) return [];
+
+    if (selectedPages === "all") return projectData.annotations.map(mapAnnotationForExport);
+
+    if (selectedPages === "custom" && customPages) {
+      // parse pages like "1,3,5-7"
+      const pagesSet = new Set<number>();
+      customPages.split(",").forEach(part => {
+        if (part.includes("-")) {
+          const [start, end] = part.split("-").map(Number);
+          for (let i = start; i <= end; i++) pagesSet.add(i);
+        } else {
+          pagesSet.add(Number(part));
         }
-      ],
-      attributes: {
-        species: "mallard",
-        gender: "male",
-        inflight: false
-      }
+      });
+      return projectData.annotations
+        .map(mapAnnotationForExport)
+        .filter(a => pagesSet.has(a.page));
+    }
+
+    return projectData.annotations.map(mapAnnotationForExport);
+  };
+
+  // Generate export data
+  const generateExportData = () => {
+    if (!projectData) return "";
+
+    const exportData = {
+      image_id: projectData.image || `${projectData.name || "untitled"}.jpg`,
+      annotations: getFilteredAnnotations(),
     };
 
     switch (selectedFormat) {
@@ -81,50 +82,62 @@ export default function Export({ isOpen, onClose, projectData }: ExportProps) {
     }
   };
 
-  const generateXML = (data: any) => {
-    return `<?xml version="1.0" encoding="UTF-8"?>
+  // Generate XML format
+  const generateXML = (data: any) => `
+<?xml version="1.0" encoding="UTF-8"?>
 <annotation>
   <image_id>${data.image_id}</image_id>
   <annotations>
-    ${data.annotations.map((ann: any) => `
-    <annotation id="${ann.id}">
-      <label>${ann.label}</label>
-      <anatomy>
-        <beak start="${ann.anatomy.beak.start.join(',')}" end="${ann.anatomy.beak.end.join(',')}" description="${ann.anatomy.beak.description}" />
-      </anatomy>
-      <spine start="${ann.spine.start.join(',')}" end="${ann.spine.end.join(',')}" description="${ann.spine.description}" />
-      <torso start="${ann.torso.start.join(',')}" end="${ann.torso.end.join(',')}" description="${ann.torso.description}" />
-      <left_foot start="${ann.left_foot.start.join(',')}" end="${ann.left_foot.end.join(',')}" description="${ann.left_foot.description}" />
-      <right_foot start="${ann.right_foot.start.join(',')}" end="${ann.right_foot.end.join(',')}" description="${ann.right_foot.description}" />
-    </annotation>`).join('')}
+    ${data.annotations
+      .map(
+        (ann: any) => `
+      <annotation id="${ann.id}" page="${ann.page}">
+        <labelId>${ann.labelId}</labelId>
+        <createdBy>${ann.createdBy}</createdBy>
+        <shape type="${ann.type}">
+          ${
+            Array.isArray(ann.coordinates[0])
+              ? ann.coordinates.map((c: number[]) => `<point>${c.join(",")}</point>`).join("")
+              : `<point>${ann.coordinates.join(",")}</point>`
+          }
+        </shape>
+      </annotation>`
+      )
+      .join("")}
   </annotations>
-  <attributes species="${data.attributes.species}" gender="${data.attributes.gender}" inflight="${data.attributes.inflight}" />
 </annotation>`;
-  };
 
-  const generateTXT = (data: any) => {
-    return `Image: ${data.image_id}
+// Generate TXT format 
+  const generateTXT = (data: any) => `
+Image: ${data.image_id}
 
 Annotations:
-${data.annotations.map((ann: any) => `
-Label: ${ann.label}
-Beak: ${ann.anatomy.beak.start.join(',')} to ${ann.anatomy.beak.end.join(',')} - ${ann.anatomy.beak.description}
-Spine: ${ann.spine.start.join(',')} to ${ann.spine.end.join(',')} - ${ann.spine.description}
-Torso: ${ann.torso.start.join(',')} to ${ann.torso.end.join(',')} - ${ann.torso.description}
-Left Foot: ${ann.left_foot.start.join(',')} to ${ann.left_foot.end.join(',')} - ${ann.left_foot.description}
-Right Foot: ${ann.right_foot.start.join(',')} to ${ann.right_foot.end.join(',')} - ${ann.right_foot.description}
-`).join('\n')}
-
-Attributes:
-Species: ${data.attributes.species}
-Gender: ${data.attributes.gender}
-In flight: ${data.attributes.inflight}`;
-  };
+${data.annotations
+  .map(
+    (ann: any) => `
+ID: ${ann.id}
+LabelId: ${ann.labelId}
+Created By: ${ann.createdBy}
+Type: ${ann.type}
+Coordinates: ${
+      Array.isArray(ann.coordinates[0])
+        ? ann.coordinates.map((c: number[]) => `[${c.join(",")}]`).join(" ")
+        : `[${ann.coordinates.join(",")}]`
+    }
+Page: ${ann.page}`
+  )
+  .join("\n")}
+`;
 
   const handleExport = () => {
     const exportContent = generateExportData();
-    const blob = new Blob([exportContent], { 
-      type: selectedFormat === "JSON" ? "application/json" : "text/plain" 
+    const blob = new Blob([exportContent], {
+      type:
+        selectedFormat === "JSON"
+          ? "application/json"
+          : selectedFormat === "XML"
+          ? "application/xml"
+          : "text/plain",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -138,7 +151,7 @@ In flight: ${data.attributes.inflight}`;
   };
 
   if (!isOpen) return null;
-
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-3xl relative shadow-xl flex">
