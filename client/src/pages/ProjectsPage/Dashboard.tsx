@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // TODO: UPDATE FOR USER AUTH
   const CURRENT_USER_ID = "68ceb5ef7fdc767b16f6fc1d"; 
 
   // Close dropdowns when clicking outside

@@ -57,7 +57,7 @@ class ProjectService {
     console.log('ProjectService initialized with API base URL:', this.apiBaseUrl);
   }
 
-  /**
+/**
  * Create a new project with image upload
  */
 async createProject(projectData: ProjectData): Promise<Project> {

@@ -1,4 +1,3 @@
-// client/src/components/modals/CreateProjectModal/CreateProject.tsx
 import { useState } from "react";
 import { useS3Upload } from "../../../services/s3UploadService";
 
@@ -24,12 +23,12 @@ const teamMembers = [
 
 export default function CreateProject({ isOpen, onClose, onCreateProject }: CreateProjectProps) {
   const [projectData, setProjectData] = useState<ProjectData>({
-    name: "Duck",
+    name: "",
     width: 1920,
     height: 1080,
     teamMembers: ["1", "2", "3"],
   });
-  
+
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -155,7 +154,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     
     // Reset form data
     setProjectData({
-      name: "Duck",
+      name: "",
       width: 1920,
       height: 1080,
       teamMembers: ["1", "2", "3"],
@@ -183,15 +182,22 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-black">Create Project</h2>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-black rounded p-1 bg-transparent hover:bg-gray-200 transition-colors"
           >
-            ×
+            <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
+              <path d="M19.5 6.5L6.5 19.5M6.5 6.5L19.5 19.5" 
+              stroke="currentColor" 
+              strokeWidth="2.5" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              />
+          </svg>
           </button>
         </div>
 

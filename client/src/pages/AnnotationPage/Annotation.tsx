@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
 import { ActiveFile, Layer, ToolbarTool } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
@@ -7,6 +7,8 @@ import { projectService } from "../../services/projectService";
 import type { Annotation as AnnotationType } from "./types";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
+import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
+import OpenProject from "../../components/modals/OpenProjectsModal/OpenProjects";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
@@ -47,7 +49,7 @@ const CURSOR_COLORS = [
   "#7986CB",
 ];
 
-interface ProjectData {
+interface Project {
   _id: string;
   name: string;
   description: string;
@@ -77,14 +79,27 @@ interface ProjectData {
   updatedAt: string;
 }
 
+interface ProjectData {
+  name: string;
+  width: number;
+  height: number;
+  imageUrl?: string;
+  imageFilename?: string;
+  teamMembers: string[];
+}
+
+// TODO: UPDATE FOR USER AUTH
+const CURRENT_USER_ID = "68ceb5ef7fdc767b16f6fc1d"; 
+
 export default function Annotation() {
   const { id: projectId } = useParams();
   const containerRef = useRef<HTMLDivElement>(null);
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
+  const navigate = useNavigate();
   
   // Project data state
-  const [project, setProject] = useState<ProjectData | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -92,13 +107,11 @@ export default function Annotation() {
   const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false); 
+  const [showOpenModal, setShowOpenModal] = useState(false); 
   const [searchLayers, setSearchLayers] = useState("");
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showFileMenu, setShowFileMenu] = useState(false);
-  const [showEditMenu, setShowEditMenu] = useState(false);
-  const [showViewMenu, setShowViewMenu] = useState(false);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
   const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -205,6 +218,33 @@ export default function Annotation() {
       selectedColor 
     });
   };
+
+  const handleCreateProject = async (projectData: ProjectData) => {
+      try {
+        if (!projectData.imageUrl) {
+          throw new Error('Image URL is required');
+        }
+
+        // Prepare data for backend
+        const backendProjectData = {
+          name: projectData.name,
+          description: '', 
+          imageUrl: projectData.imageUrl,
+          imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
+          imageWidth: projectData.width,
+          imageHeight: projectData.height,
+          ownerId: CURRENT_USER_ID
+        };
+
+        // Create project in backend
+        const newProject = await projectService.createProject(backendProjectData);
+
+        navigate(`/annotation/${newProject._id}`);
+      } catch (err) {
+        console.error('Failed to create project:', err);
+        setError(err instanceof Error ? err.message : 'Failed to create project');
+      }
+    };
 
   const toolbarTools: ToolbarTool[] = [
     {
@@ -335,20 +375,12 @@ export default function Annotation() {
       <TopNav
         projectName={project.name}
         activeFiles={activeFiles}
-        showShareModal={showShareModal}
-        showExportModal={showExportModal}
-        showUserDropdown={showUserDropdown}
-        showFileMenu={showFileMenu}
-        showEditMenu={showEditMenu}
-        showViewMenu={showViewMenu}
         onSwitchFile={switchFile}
         onCloseFile={closeFile}
         onShowShareModal={() => setShowShareModal(true)}
         onShowExportModal={() => setShowExportModal(true)}
-        onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
-        onToggleFileMenu={() => setShowFileMenu(!showFileMenu)}
-        onToggleEditMenu={() => setShowEditMenu(!showEditMenu)}
-        onToggleViewMenu={() => setShowViewMenu(!showViewMenu)}
+        onShowCreateModal={() => setShowCreateModal(true)}
+        onShowOpenModal={() => setShowOpenModal(true)}
         onCanvasZoom={handleCanvasZoom}
         others={others}
         cursorColors={CURSOR_COLORS}
@@ -432,6 +464,17 @@ export default function Annotation() {
           annotations: annotations,
           image: activeFile?.imageUrl || ""
         }}
+      />
+      {/* Create Project Modal */}
+      <CreateProject
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreateProject={handleCreateProject}
+      />
+      <OpenProject
+        isOpen={showOpenModal}
+        onClose={() => setShowOpenModal(false)}
+        currentUserId={CURRENT_USER_ID}
       />
     </div>
   );
