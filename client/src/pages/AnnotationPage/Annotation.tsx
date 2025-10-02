@@ -109,6 +109,7 @@ export default function Annotation() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false); 
   const [showOpenModal, setShowOpenModal] = useState(false); 
+  const [showGrid, setShowGrid] = useState(false); 
   const [searchLayers, setSearchLayers] = useState("");
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
@@ -192,6 +193,10 @@ export default function Annotation() {
       if (direction === "out") return Math.max(prev - 25, 25);
       return 100; // reset
     });
+  };
+
+  const handleGrid = () => {
+    setShowGrid((prev) => !prev);
   };
 
   // Handle mouse movement to update cursor position
@@ -382,6 +387,8 @@ export default function Annotation() {
         onShowCreateModal={() => setShowCreateModal(true)}
         onShowOpenModal={() => setShowOpenModal(true)}
         onCanvasZoom={handleCanvasZoom}
+        onShowGrid={handleGrid}
+        showGrid={showGrid}
         others={others}
         cursorColors={CURSOR_COLORS}
       />
@@ -408,6 +415,7 @@ export default function Annotation() {
           selectedAnnotationId={selectedAnnotationId}
           setSelectedAnnotationId={setSelectedAnnotationId}
           projectImage={activeFile} // Pass the active file/image data
+          showGrid = {showGrid} 
         />
         <LayersPanel
           search={searchLayers}
