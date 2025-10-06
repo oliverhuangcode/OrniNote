@@ -14,13 +14,10 @@ import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
 import "../../styles/globals.css";
 import { s3UploadService } from "../../services/s3UploadService";
-<<<<<<< Updated upstream
-=======
 import { annotationService } from '../../services/annotationService';
 import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels";
 import LabelSelector from "./components/LabelSelector";
 import { labelService, Label } from '../../services/labelService';  
->>>>>>> Stashed changes
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -184,8 +181,6 @@ export default function Annotation() {
     }
   };
 
-<<<<<<< Updated upstream
-=======
   const loadLabels = async () => {
     if (!projectId) return;
     
@@ -352,7 +347,6 @@ export default function Annotation() {
     }
   };
 
->>>>>>> Stashed changes
   const handleAddImage = async () => {
     // Create file input element
     const input = document.createElement('input');
@@ -474,9 +468,7 @@ export default function Annotation() {
           ]);
 
           console.log(`Successfully added ${imagesData.length} images!`);
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
+          // REMOVED: alert(`Successfully uploaded ${imagesData.length} image(s)`);
         }
       } catch (err) {
         console.error('Error uploading images:', err);
@@ -779,15 +771,12 @@ export default function Annotation() {
           image: activeFile?.imageUrl || ""
         }}
       />
-<<<<<<< Updated upstream
-=======
       <ManageLabels
         isOpen={showManageLabelsModal}
         onClose={() => setShowManageLabelsModal(false)}
         projectId={project._id}
         onLabelsChanged={loadLabels}
       />
->>>>>>> Stashed changes
       {/* Upload Loading Indicator */}
       {isUploadingImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
