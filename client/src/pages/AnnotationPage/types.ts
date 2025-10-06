@@ -1,5 +1,3 @@
-// client/src/pages/AnnotationPage/types.ts
-
 export interface ActiveFile {
   id: string;
   name: string;

@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const CURRENT_USER_ID = "68ceb5ef7fdc767b16f6fc1d"; 
+  const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3"; 
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -59,12 +59,23 @@ export default function Dashboard() {
     loadProjects();
   }, []);
 
+  useEffect(() => {
+    loadProjects();
+  }, [currentView]);
+
   const loadProjects = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const backendProjects = await projectService.getUserProjects(CURRENT_USER_ID);
+      let backendProjects;
+      
+      // Load different projects based on current view
+      if (currentView === 'deleted') {
+        backendProjects = await projectService.getDeletedProjects(CURRENT_USER_ID);
+      } else {
+        backendProjects = await projectService.getUserProjects(CURRENT_USER_ID);
+      }
       
       // Convert backend projects to dashboard card format
       const formattedProjects = backendProjects.map(project => 
@@ -80,38 +91,39 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreateProject = async (projectData: ProjectData) => {
-    try {
-      if (!projectData.imageUrl) {
-        throw new Error('Image URL is required');
-      }
-
-      // Prepare data for backend
-      const backendProjectData = {
-        name: projectData.name,
-        description: '', 
-        imageUrl: projectData.imageUrl,
-        imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
-        imageWidth: projectData.width,
-        imageHeight: projectData.height,
-        ownerId: CURRENT_USER_ID
-      };
-
-      // Create project in backend
-      const newProject = await projectService.createProject(backendProjectData);
-      
-      // Convert to dashboard format and add to local state
-      const formattedProject = projectService.convertToCardFormat(newProject);
-      setProjects(prev => [formattedProject, ...prev]);
-
-      console.log('Project created successfully:', newProject);
-
-      navigate(`/annotation/${newProject._id}`);
-    } catch (err) {
-      console.error('Failed to create project:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create project');
+const handleCreateProject = async (projectData: ProjectData) => {
+  try {
+    if (!projectData.imageUrl) {
+      throw new Error('Image URL is required');
     }
-  };
+
+    // Prepare data for backend
+    const backendProjectData = {
+      name: projectData.name,
+      description: '', 
+      imageUrl: projectData.imageUrl,
+      imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
+      imageWidth: projectData.width,
+      imageHeight: projectData.height,
+      ownerId: CURRENT_USER_ID
+    };
+
+    // Create project in backend (MongoDB)
+    const newProject = await projectService.createProject(backendProjectData);
+    
+    // Convert to dashboard format and add to local state
+    const formattedProject = projectService.convertToCardFormat(newProject);
+    setProjects(prev => [formattedProject, ...prev]);
+
+    console.log('Project created successfully:', newProject);
+
+    // Navigate to annotation page
+    navigate(`/annotation/${newProject._id}`);
+  } catch (err) {
+    console.error('Failed to create project:', err);
+    setError(err instanceof Error ? err.message : 'Failed to create project');
+  }
+};
 
   const handleDeleteProject = async (projectId: string) => {
     try {
@@ -139,14 +151,15 @@ export default function Dashboard() {
 
   const handleRestoreProject = async (projectId: string) => {
     try {
-      // Update local state
-      setProjects(prev =>
-        prev.map(p =>
-          p.id === projectId
-            ? { ...p, deletedAt: null, lastEdited: "Restored just now" }
-            : p
-        )
-      );
+      console.log('Attempting to restore project:', projectId);
+      
+      // Call backend API to restore project
+      await projectService.restoreProject(projectId);
+      
+      console.log('Restore API call successful');
+      
+      // Reload projects to refresh the view
+      await loadProjects();
       
       console.log("Project restored successfully:", projectId);
     } catch (err) {
@@ -157,6 +170,13 @@ export default function Dashboard() {
 
   const handlePermanentDelete = async (projectId: string) => {
     try {
+      console.log('Attempting to permanently delete project:', projectId);
+      
+      // Call backend API to permanently delete project
+      await projectService.permanentlyDeleteProject(projectId);
+      
+      console.log('Permanent delete API call successful');
+      
       // Remove from local state entirely
       setProjects(prev => prev.filter(project => project.id !== projectId));
       

@@ -1,4 +1,3 @@
-// server/src/routes/project.js
 import express from "express";
 import { Project } from "../../models/projects.js";
 import { Image } from '../../models/images.js';
@@ -169,9 +168,16 @@ router.get('/user/:userId', async (req, res) => {
       ]
     };
 
-    // If includeDeleted is not explicitly set to true, exclude deleted projects
-    if (includeDeleted !== 'true') {
-      query.deletedAt = { $exists: false };
+    // Filter based on deletedAt status
+    if (includeDeleted === 'true') {
+      // Return only deleted projects (deletedAt is not null)
+      query.deletedAt = { $ne: null };
+    } else if (includeDeleted === 'all') {
+      // Return all projects (no deletedAt filter)
+      // Don't add any deletedAt filter
+    } else {
+      // Default: return only non-deleted projects (deletedAt is null)
+      query.deletedAt = null;
     }
 
     const projects = await Project.find(query)
@@ -303,29 +309,135 @@ router.delete('/:projectId/permanent', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // Delete images from S3
-    for (const image of project.images) {
-      try {
-        await s3.send(new DeleteObjectCommand({
-          Bucket: process.env.AWS_S3_BUCKET,
-          Key: image.filename,
-        }));
-        console.log(`Deleted ${image.filename} from S3`);
-      } catch (err) {
-        console.error(`Failed to delete ${image.filename} from S3`, err);
-      }
+    // Check if project is soft-deleted first
+    // Only allow permanent delete if deletedAt is not null
+    if (!project.deletedAt) {
+      return res.status(400).json({ 
+        error: 'Project must be soft-deleted first before permanent deletion' 
+      });
     }
 
-    // Delete images from DB
+    // Delete images from S3
+    const s3DeletePromises = project.images.map(async (image) => {
+      try {
+        // Extract the S3 key from the URL
+        // Assuming URL format: https://bucket-name.s3.region.amazonaws.com/filename
+        const filename = image.filename || image.url.split('/').pop();
+        
+        // Extract the S3 key from the URL
+        let s3Key = image.filename;
+        
+        if (image.url) {
+          // Handle CloudFront URLs
+          if (image.url.includes('cloudfront.net/')) {
+            s3Key = image.url.split('cloudfront.net/')[1];
+          }
+          // Handle S3 direct URLs
+          else if (image.url.includes('.s3.') && image.url.includes('.amazonaws.com/')) {
+            s3Key = image.url.split('.amazonaws.com/')[1];
+          }
+        }
+        
+        await s3.send(new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME,  
+          Key: s3Key,
+        }));
+        console.log(`Deleted ${filename} from S3`);
+      } catch (err) {
+        console.error(`Failed to delete ${image.filename} from S3:`, err);
+        // Continue even if S3 delete fails
+      }
+    });
+
+    // Wait for all S3 deletions to complete
+    await Promise.all(s3DeletePromises);
+
+    // Delete images from MongoDB
     await Image.deleteMany({ projectId });
+    console.log(`Deleted ${project.images.length} images from MongoDB for project ${projectId}`);
 
-    // Delete project itself
+    // Delete project itself from MongoDB
     await Project.findByIdAndDelete(projectId);
+    console.log(`Permanently deleted project ${projectId} from MongoDB`);
 
-    res.json({ message: 'Project permanently deleted from DB and S3' });
+    res.json({ 
+      message: 'Project and associated images permanently deleted from MongoDB and S3',
+      deletedImages: project.images.length
+    });
   } catch (error) {
     console.error('Error permanently deleting project:', error);
-    res.status(500).json({ error: 'Failed to permanently delete project' });
+    res.status(500).json({ 
+      error: 'Failed to permanently delete project',
+      message: error.message 
+    });
+  }
+});
+
+// Add image to existing project
+router.post('/:projectId/images', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { 
+      imageUrl, 
+      imageFilename,
+      imageWidth,
+      imageHeight
+    } = req.body;
+
+    // Validate required fields
+    if (!imageUrl) {
+      return res.status(400).json({
+        error: 'Image URL is required'
+      });
+    }
+
+    // Verify project exists
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found'
+      });
+    }
+
+    // Create the image record
+    const image = new Image({
+      projectId: projectId,
+      filename: imageFilename || 'uploaded-image.jpg',
+      url: imageUrl,
+      width: imageWidth || 800,
+      height: imageHeight || 600
+    });
+
+    const savedImage = await image.save();
+
+    // Add image reference to project
+    project.images.push(savedImage._id);
+    await project.save();
+
+    // Populate the updated project
+    const populatedProject = await Project.findById(projectId)
+      .populate('owner', 'username email')
+      .populate('images')
+      .populate('collaborators.user', 'username email');
+
+    console.log('Image added to project successfully:', {
+      projectId: projectId,
+      imageId: savedImage._id,
+      filename: savedImage.filename
+    });
+
+    res.status(201).json({
+      message: 'Image added to project successfully',
+      image: savedImage,
+      project: populatedProject
+    });
+
+  } catch (error) {
+    console.error('Error adding image to project:', error);
+    res.status(500).json({
+      error: 'Failed to add image to project',
+      message: error.message
+    });
   }
 });
 

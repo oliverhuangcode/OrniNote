@@ -13,6 +13,7 @@ import LayersPanel from "./components/LayersPanel";
 import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
 import "../../styles/globals.css";
+import { s3UploadService } from "../../services/s3UploadService";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -82,7 +83,9 @@ export default function Annotation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
-  
+
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+    
   // Project data state
   const [project, setProject] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,6 +154,103 @@ export default function Annotation() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddImage = async () => {
+    // Create file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml';
+    
+    input.onchange = async (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      
+      if (!file) return;
+
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      if (!validTypes.includes(file.type)) {
+        alert('Invalid file type. Please upload an image file.');
+        return;
+      }
+
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB.');
+        return;
+      }
+
+      try {
+        setIsUploadingImage(true);
+
+        // Upload to S3
+        console.log('Uploading image to S3...');
+        const uploadResult = await s3UploadService.uploadImage(file);
+
+        if (!uploadResult.success || !uploadResult.imageUrl) {
+          throw new Error(uploadResult.error || 'Upload failed');
+        }
+
+        console.log('Image uploaded to S3:', uploadResult.imageUrl);
+
+        // Get image dimensions
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+
+        const imageData = {
+          imageUrl: uploadResult.imageUrl,
+          imageFilename: file.name,
+          imageWidth: img.naturalWidth,
+          imageHeight: img.naturalHeight
+        };
+
+        console.log('Adding image to project...');
+        
+        // Add image to project via backend
+        if (projectId) {
+          const updatedProject = await projectService.addImageToProject(projectId, imageData);
+          
+          // Update local project state
+          setProject(updatedProject);
+
+          // Add new file to active files and switch to it
+          const newImage = updatedProject.images[updatedProject.images.length - 1];
+          const newFile: ActiveFile = {
+            id: newImage._id,
+            name: newImage.filename,
+            isActive: true, // Auto-switch to new image
+            imageUrl: newImage.url,
+            width: newImage.width,
+            height: newImage.height
+          };
+
+          // Set all existing files to inactive, then add new active file
+          setActiveFiles(prev => [
+            ...prev.map(file => ({ ...file, isActive: false })),
+            newFile
+          ]);
+
+          console.log('Image added successfully!');
+        }
+
+        // Clean up
+        URL.revokeObjectURL(img.src);
+        
+      } catch (err) {
+        console.error('Failed to add image:', err);
+        alert(err instanceof Error ? err.message : 'Failed to add image');
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
+
+    // Trigger file selection
+    input.click();
   };
 
   const handleToolSelect = (toolId: string) => {
@@ -350,6 +450,7 @@ export default function Annotation() {
         onToggleEditMenu={() => setShowEditMenu(!showEditMenu)}
         onToggleViewMenu={() => setShowViewMenu(!showViewMenu)}
         onCanvasZoom={handleCanvasZoom}
+        onAddImage={handleAddImage}
         others={others}
         cursorColors={CURSOR_COLORS}
       />
@@ -433,6 +534,17 @@ export default function Annotation() {
           image: activeFile?.imageUrl || ""
         }}
       />
+      {/* Upload Loading Indicator */}
+      {isUploadingImage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+              <span className="text-gray-900 font-medium">Uploading image...</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
