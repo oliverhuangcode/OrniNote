@@ -1,44 +1,149 @@
 import mongoose, { Schema } from 'mongoose';
 
+// Coordinate validation functions
+const validateRectangleCoordinates = (coords) => {
+  return (
+    coords &&
+    typeof coords.x === 'number' &&
+    typeof coords.y === 'number' &&
+    typeof coords.width === 'number' &&
+    typeof coords.height === 'number' &&
+    coords.width >= 0 &&
+    coords.height >= 0
+  );
+};
+
+const validatePolygonCoordinates = (coords) => {
+  return (
+    coords &&
+    Array.isArray(coords.points) &&
+    coords.points.length >= 3 &&
+    coords.points.every((p) => 
+      Array.isArray(p) && 
+      p.length === 2 && 
+      typeof p[0] === 'number' && 
+      typeof p[1] === 'number'
+    )
+  );
+};
+
+const validateLineCoordinates = (coords) => {
+  return (
+    coords &&
+    Array.isArray(coords.points) &&
+    coords.points.length >= 2 &&
+    coords.points.every((p) => 
+      Array.isArray(p) && 
+      p.length === 2 && 
+      typeof p[0] === 'number' && 
+      typeof p[1] === 'number'
+    )
+  );
+};
+
+const validatePointCoordinates = (coords) => {
+  return (
+    coords &&
+    typeof coords.x === 'number' &&
+    typeof coords.y === 'number'
+  );
+};
+
 const shapeDataSchema = new Schema({
   type: {
     type: String,
-    enum: ['rectangle', 'polygon', 'line', 'point', 'circle'],
+    enum: ['rectangle', 'polygon', 'line', 'point'],
     required: true
   },
   coordinates: {
     type: Schema.Types.Mixed, // Allows both number[][] and number[]
-    required: true
+    required: true,
+    validate: {
+      validator: function(coords) {
+        const type = this.parseInt().type;
+        
+        switch(type) {
+          case 'rectangle':
+            return validateRectangleCoordinates(coords);
+          
+          case 'polygon':
+            return validatePolygonCoordinates(coords);
+          
+          case 'line':
+            return validateLineCoordinates(coords);
+          
+          case 'point':
+            return validatePointCoordinates(coords);
+          
+          default:
+            return false;
+        }
+      },
+      message: 'Invalid coordinates for the specified shape type'
+    }
+  },
+  isNormalised: {
+    type: Boolean,
+    default: false
   }
-}, { _id: false });
+},
+{ _id: false });
 
 const annotationSchema = new Schema({
   imageId: {
     type: Schema.Types.ObjectId,
     ref: 'Image',
-    required: true
+    required: true,
+    index: true
   },
   labelId: {
     type: Schema.Types.ObjectId,
     ref: 'Label',
-    required: true
+    required: true,
+    index: true
   },
   createdBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   shapeData: {
     type: shapeDataSchema,
     required: true
+  }, 
+  area: {
+    type: Number,
+    min: 0
   }
 }, {
   timestamps: true
 });
 
-annotationSchema.index({ imageId: 1 });
-annotationSchema.index({ labelId: 1 });
-annotationSchema.index({ createdBy: 1 });
+annotationSchema.index({ imageId: 1, labelId: 1 });
+annotationSchema.index({ imageId: 1, createdBy: 1 });
 annotationSchema.index({ createdAt: -1 });
+
+annotationSchema.pre('save', function(next) {
+  if (this.shapeData.type === 'rectangle') {
+    // Rectangle: width × height
+    const coords = this.shapeData.coordinates;
+    this.area = coords.width * coords.height;
+  } 
+  else if (this.shapeData.type === 'polygon') {
+    // Polygon: Shoelace formula
+    const points = this.shapeData.coordinates.points;
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += points[i][0] * points[j][1];
+      area -= points[j][0] * points[i][1];
+    }
+    this.area = Math.abs(area / 2);
+  }
+  // Lines and points don't have area
+  
+  next();
+});
 
 export const Annotation = mongoose.model('Annotation', annotationSchema);

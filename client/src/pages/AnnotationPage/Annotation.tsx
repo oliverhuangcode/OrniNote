@@ -14,6 +14,13 @@ import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
 import "../../styles/globals.css";
 import { s3UploadService } from "../../services/s3UploadService";
+<<<<<<< Updated upstream
+=======
+import { annotationService } from '../../services/annotationService';
+import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels";
+import LabelSelector from "./components/LabelSelector";
+import { labelService, Label } from '../../services/labelService';  
+>>>>>>> Stashed changes
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -111,12 +118,28 @@ export default function Annotation() {
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
 
+  const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3";
+
+  // State for current image and label
+  const [currentImageId, setCurrentImageId] = useState<string | null>(null);
+  const [currentLabelId, setCurrentLabelId] = useState<string | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [showManageLabelsModal, setShowManageLabelsModal] = useState(false);
+
   // Load project data on mount
   useEffect(() => {
     if (projectId) {
       loadProject();
+      loadLabels();
     }
   }, [projectId]);
+
+  useEffect(() => {
+    const activeFile = activeFiles.find(file => file.isActive);
+    if (activeFile && activeFile.id !== currentImageId) {
+      setCurrentImageId(activeFile.id);
+    }
+  }, [activeFiles, currentImageId]);
 
   const loadProject = async () => {
     try {
@@ -148,6 +171,11 @@ export default function Annotation() {
         setActiveFiles([]);
       }
 
+      // Set first image as current if images exist
+      if (projectData.images && projectData.images.length > 0) {
+        setCurrentImageId(projectData.images[0]._id);
+      }
+
     } catch (err) {
       console.error('Failed to load project:', err);
       setError(err instanceof Error ? err.message : 'Failed to load project');
@@ -156,6 +184,175 @@ export default function Annotation() {
     }
   };
 
+<<<<<<< Updated upstream
+=======
+  const loadLabels = async () => {
+    if (!projectId) return;
+    
+    try {
+      const fetchedLabels = await labelService.getLabelsForProject(projectId);
+      setLabels(fetchedLabels);
+      
+      // Set first label as default if available and none is selected
+      if (fetchedLabels.length > 0 && !currentLabelId) {
+        setCurrentLabelId(fetchedLabels[0]._id);
+        console.log('Auto-selected first label:', fetchedLabels[0].name);
+      } else if (fetchedLabels.length === 0) {
+        console.warn('No labels found. Create labels before annotating.');
+      }
+    } catch (err) {
+      console.error('Failed to load labels:', err);
+    }
+  };
+  
+  // Load annotations from database
+  const loadAnnotationsForImage = async (imageId: string) => {
+    try {
+      console.log('Loading annotations for image:', imageId);
+      const fetchedAnnotations = await annotationService.getAnnotationsForImage(imageId);
+      
+      // Convert backend format to your frontend annotation format
+      const convertedAnnotations: AnnotationType[] = fetchedAnnotations.map(ann => {
+        let properties: any = {
+          style: {
+            color: ann.labelId.colour
+          }
+        };
+
+        // Convert backend coordinates to frontend format
+        if (ann.shapeData.type === 'rectangle') {
+          properties.position = {
+            x: ann.shapeData.coordinates.x,
+            y: ann.shapeData.coordinates.y
+          };
+          properties.width = ann.shapeData.coordinates.width;
+          properties.height = ann.shapeData.coordinates.height;
+        } else if (ann.shapeData.type === 'polygon' || ann.shapeData.type === 'line') {
+          properties.points = ann.shapeData.coordinates.points.map((p: number[]) => ({
+            x: p[0],
+            y: p[1]
+          }));
+        } else if (ann.shapeData.type === 'point') {
+          properties.position = {
+            x: ann.shapeData.coordinates.x,
+            y: ann.shapeData.coordinates.y
+          };
+        } else if (ann.shapeData.type === 'circle') {
+          properties.position = {
+            x: ann.shapeData.coordinates.x,
+            y: ann.shapeData.coordinates.y
+          };
+          properties.radius = ann.shapeData.coordinates.radius;
+        }
+
+        return {
+          id: ann._id,
+          type: ann.shapeData.type as any,
+          properties: properties,
+          labelId: ann.labelId._id,
+          labelName: ann.labelId.name,
+          createdBy: ann.createdBy._id
+        } as AnnotationType;
+      });
+      
+      setAnnotations(convertedAnnotations);
+      console.log(`Loaded ${convertedAnnotations.length} annotations`);
+      
+    } catch (error) {
+      console.error('Failed to load annotations:', error);
+    }
+  };
+
+  // Load annotations when currentImageId changes
+  useEffect(() => {
+    if (currentImageId) {
+      loadAnnotationsForImage(currentImageId);
+    }
+  }, [currentImageId]);
+
+  // Show helpful message when no labels exist
+  useEffect(() => {
+    if (!loading && labels.length === 0 && annotations.length === 0 && project) {
+      setTimeout(() => {
+        alert('Welcome! Please create labels first using the "Manage Labels" button before annotating.');
+      }, 500);
+    }
+  }, [loading, labels.length, annotations.length, project]);
+
+  // Save annotation to database
+  const saveAnnotationToDatabase = async (annotation: AnnotationType) => {
+    try {
+      if (!currentImageId || !currentLabelId) {
+        console.error('Cannot save: No image or label selected');
+        alert('Please select a label before creating annotations. Click "Manage Labels" to create labels first.');
+        // Remove the unsaved annotation from UI
+        setAnnotations(prev => prev.filter(ann => ann.id !== annotation.id));
+        return;
+      }
+
+      // Map your frontend annotation format to backend format
+      let coordinates: any;
+      
+      if (annotation.type === 'rectangle' && annotation.properties.position) {
+        // Convert frontend rectangle format to backend format
+        coordinates = {
+          x: annotation.properties.position.x,
+          y: annotation.properties.position.y,
+          width: annotation.properties.width || 0,
+          height: annotation.properties.height || 0
+        };
+      } else if (annotation.type === 'polygon' && annotation.properties.points) {
+        // Convert frontend polygon format to backend format
+        coordinates = {
+          points: annotation.properties.points.map((p: any) => [p.x, p.y])
+        };
+      } else if (annotation.type === 'line' && annotation.properties.points) {
+        // Convert frontend line format to backend format
+        coordinates = {
+          points: annotation.properties.points.map((p: any) => [p.x, p.y])
+        };
+      } else {
+        console.warn('Unknown annotation type or missing properties:', annotation);
+        return;
+      }
+
+      const shapeData = {
+        type: annotation.type,
+        coordinates: coordinates,
+        isNormalized: false
+      };
+
+      const savedAnnotation = await annotationService.createAnnotation({
+        imageId: currentImageId,
+        labelId: currentLabelId,
+        createdBy: CURRENT_USER_ID,
+        shapeData
+      });
+
+      console.log('Annotation saved to database:', savedAnnotation);
+      
+      // Update the local annotation with the database ID and server data
+      setAnnotations(prev => 
+        prev.map(ann => {
+          if (ann.id === annotation.id) {
+            return {
+              ...ann,
+              id: savedAnnotation._id,
+              labelId: savedAnnotation.labelId._id,
+              labelName: savedAnnotation.labelId.name,
+              createdBy: savedAnnotation.createdBy._id
+            };
+          }
+          return ann;
+        })
+      );
+      
+    } catch (error) {
+      console.error('Failed to save annotation:', error);
+    }
+  };
+
+>>>>>>> Stashed changes
   const handleAddImage = async () => {
     // Create file input element
     const input = document.createElement('input');
@@ -277,6 +474,9 @@ export default function Annotation() {
           ]);
 
           console.log(`Successfully added ${imagesData.length} images!`);
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
         }
       } catch (err) {
         console.error('Error uploading images:', err);
@@ -491,6 +691,14 @@ export default function Annotation() {
         cursorColors={CURSOR_COLORS}
       />
 
+      {/* Label Selector */}
+      <LabelSelector
+        labels={labels}
+        selectedLabelId={currentLabelId}
+        onSelectLabel={setCurrentLabelId}
+        onManageLabels={() => setShowManageLabelsModal(true)}
+      />
+
       {/* Main Content */}
       <div className="flex flex-1 relative" ref={containerRef}>
         <LeftToolbar
@@ -513,6 +721,7 @@ export default function Annotation() {
           selectedAnnotationId={selectedAnnotationId}
           setSelectedAnnotationId={setSelectedAnnotationId}
           projectImage={activeFile} // Pass the active file/image data
+          onAnnotationCreated={saveAnnotationToDatabase}
         />
         <LayersPanel
           search={searchLayers}
@@ -570,6 +779,15 @@ export default function Annotation() {
           image: activeFile?.imageUrl || ""
         }}
       />
+<<<<<<< Updated upstream
+=======
+      <ManageLabels
+        isOpen={showManageLabelsModal}
+        onClose={() => setShowManageLabelsModal(false)}
+        projectId={project._id}
+        onLabelsChanged={loadLabels}
+      />
+>>>>>>> Stashed changes
       {/* Upload Loading Indicator */}
       {isUploadingImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

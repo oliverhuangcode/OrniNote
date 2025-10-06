@@ -55,6 +55,9 @@ export interface Annotation {
     
     // Legacy color property (kept for backward compatibility)
     color?: string;
+    labelId?: string;    
+    labelName?: string;   
+    createdBy?: string; 
   };
 }
 
