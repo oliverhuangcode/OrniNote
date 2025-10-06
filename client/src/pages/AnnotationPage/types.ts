@@ -57,3 +57,11 @@ export interface Annotation {
     color?: string;
   };
 }
+
+// Image data interface for uploading
+export interface ImageData {
+  imageUrl: string;
+  imageFilename: string;
+  imageWidth: number;
+  imageHeight: number;
+}

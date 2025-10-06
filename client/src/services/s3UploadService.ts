@@ -88,6 +88,97 @@ class S3UploadService {
   }
 
   /**
+   * Upload multiple images to S3
+   */
+  async uploadMultipleImages(
+    files: File[],
+    onProgress?: (fileIndex: number, fileName: string, progress: number) => void
+  ): Promise<{ success: boolean; results: UploadResponse[] }> {
+    const results: UploadResponse[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      try {
+        const result = await this.uploadImage(file, (progress) => {
+          onProgress?.(i, file.name, progress);
+        });
+        results.push(result);
+      } catch (error) {
+        results.push({
+          success: false,
+          error: `Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+      }
+    }
+    
+    return {
+      success: results.every(r => r.success),
+      results
+    };
+  }
+
+  /**
+   * Extract image files from a zip file
+   */
+  async extractImagesFromZip(zipFile: File): Promise<File[]> {
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+    
+    try {
+      const zipContent = await zip.loadAsync(zipFile);
+      const imageFiles: File[] = [];
+      
+      // Iterate through all files in the zip
+      for (const [filename, file] of Object.entries(zipContent.files)) {
+        // Skip directories and hidden files
+        if (file.dir || filename.startsWith('__MACOSX') || filename.startsWith('.')) {
+          continue;
+        }
+        
+        // Check if it's an image file
+        const extension = filename.split('.').pop()?.toLowerCase();
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        
+        if (extension && imageExtensions.includes(extension)) {
+          // Extract the file as a blob
+          const blob = await file.async('blob');
+          
+          // Determine MIME type
+          const mimeType = this.getMimeTypeFromExtension(extension);
+          
+          // Create a File object with just the filename (no path)
+          const fileName = filename.split('/').pop() || filename;
+          const imageFile = new File([blob], fileName, { type: mimeType });
+          
+          imageFiles.push(imageFile);
+        }
+      }
+      
+      return imageFiles;
+    } catch (error) {
+      console.error('Error extracting images from zip:', error);
+      throw new Error('Failed to extract images from zip file');
+    }
+  }
+
+  /**
+   * Get MIME type from file extension
+   */
+  private getMimeTypeFromExtension(extension: string): string {
+    const mimeTypes: { [key: string]: string } = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml'
+    };
+    
+    return mimeTypes[extension.toLowerCase()] || 'image/jpeg';
+  }
+
+  /**
    * Complete upload process with progress tracking
    */
   async uploadImage(
@@ -100,13 +191,6 @@ class S3UploadService {
         return {
           success: false,
           error: 'Invalid file type. Please upload an image file.',
-        };
-      }
-
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        return {
-          success: false,
-          error: 'File size too large. Maximum size is 10MB.',
         };
       }
 

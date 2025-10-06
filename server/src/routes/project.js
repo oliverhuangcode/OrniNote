@@ -441,4 +441,71 @@ router.post('/:projectId/images', async (req, res) => {
   }
 });
 
+// Batch add multiple images to existing project
+router.post('/:projectId/images/batch', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { images } = req.body; // Array of image objects
+
+    // Validate required fields
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({
+        error: 'Images array is required and must not be empty'
+      });
+    }
+
+    // Verify project exists
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found'
+      });
+    }
+
+    // Create all image records
+    const createdImages = [];
+    for (const imageData of images) {
+      const { imageUrl, imageFilename, imageWidth, imageHeight } = imageData;
+
+      if (!imageUrl) {
+        console.warn('Skipping image without URL:', imageFilename);
+        continue;
+      }
+
+      const image = new Image({
+        projectId: projectId,
+        filename: imageFilename || 'uploaded-image.jpg',
+        url: imageUrl,
+        width: imageWidth || 1920,
+        height: imageHeight || 1080
+      });
+
+      const savedImage = await image.save();
+      createdImages.push(savedImage);
+    }
+
+    // Add all image IDs to project
+    project.images.push(...createdImages.map(img => img._id));
+    await project.save();
+
+    // Populate and return updated project
+    const updatedProject = await Project.findById(projectId)
+      .populate('owner', 'username email')
+      .populate('collaborators.user', 'username email')
+      .populate('images');
+
+    res.status(201).json({
+      message: `Successfully added ${createdImages.length} images`,
+      project: updatedProject,
+      addedImages: createdImages
+    });
+  } catch (error) {
+    console.error('Error batch adding images to project:', error);
+    res.status(500).json({
+      error: 'Failed to batch add images',
+      message: error.message
+    });
+  }
+});
+
 export default router;

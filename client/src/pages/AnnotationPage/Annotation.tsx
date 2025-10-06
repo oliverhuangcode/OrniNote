@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
-import { ActiveFile, Layer, ToolbarTool } from "./types";
+import { ActiveFile, Layer, ToolbarTool, ImageData } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
 import { projectService } from "../../services/projectService";
 import type { Annotation as AnnotationType } from "./types";
@@ -160,96 +160,132 @@ export default function Annotation() {
     // Create file input element
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml';
+    input.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,application/zip,.zip';
+    input.multiple = true; // Allow multiple file selection
     
     input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
+      const files = target.files;
       
-      if (!file) return;
-
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-      if (!validTypes.includes(file.type)) {
-        alert('Invalid file type. Please upload an image file.');
-        return;
-      }
-
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB.');
-        return;
-      }
+      if (!files || files.length === 0) return;
 
       try {
         setIsUploadingImage(true);
 
-        // Upload to S3
-        console.log('Uploading image to S3...');
-        const uploadResult = await s3UploadService.uploadImage(file);
-
-        if (!uploadResult.success || !uploadResult.imageUrl) {
-          throw new Error(uploadResult.error || 'Upload failed');
+        // Separate zip files and image files
+        const zipFiles: File[] = [];
+        const imageFiles: File[] = [];
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.name.toLowerCase().endsWith('.zip')) {
+            zipFiles.push(file);
+          } else {
+            imageFiles.push(file);
+          }
         }
 
-        console.log('Image uploaded to S3:', uploadResult.imageUrl);
+        // Extract images from zip files
+        for (const zipFile of zipFiles) {
+          console.log('Extracting images from zip:', zipFile.name);
+          const extractedImages = await s3UploadService.extractImagesFromZip(zipFile);
+          imageFiles.push(...extractedImages);
+          console.log(`Extracted ${extractedImages.length} images from ${zipFile.name}`);
+        }
 
-        // Get image dimensions
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = URL.createObjectURL(file);
-        });
+        if (imageFiles.length === 0) {
+          alert('No valid image files found');
+          return;
+        }
 
-        const imageData = {
-          imageUrl: uploadResult.imageUrl,
-          imageFilename: file.name,
-          imageWidth: img.naturalWidth,
-          imageHeight: img.naturalHeight
-        };
+        // Validate all files
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        for (const file of imageFiles) {
+          // Check if file type starts with 'image/' for more lenient validation
+          if (!file.type.startsWith('image/') && !validTypes.includes(file.type)) {
+            alert(`Invalid file type: ${file.name} (${file.type}). Please upload only image files.`);
+            return;
+          }
+        }
 
-        console.log('Adding image to project...');
-        
-        // Add image to project via backend
+        console.log(`Uploading ${imageFiles.length} images...`);
+
+        // Upload all images to S3
+        const uploadResults = await s3UploadService.uploadMultipleImages(
+          imageFiles,
+          (fileIndex, fileName, progress) => {
+            console.log(`Uploading ${fileName} (${fileIndex + 1}/${imageFiles.length}): ${progress.toFixed(1)}%`);
+          }
+        );
+
+        if (!uploadResults.success) {
+          const failedUploads = uploadResults.results
+            .filter(r => !r.success)
+            .map(r => r.error)
+            .join('\n');
+          throw new Error(`Some uploads failed:\n${failedUploads}`);
+        }
+
+        console.log('All images uploaded to S3 successfully');
+
+        // Get dimensions for all images
+        const imagesData: ImageData[] = await Promise.all(
+          imageFiles.map(async (file, index) => {
+            const uploadResult = uploadResults.results[index];
+            
+            // Get image dimensions
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = URL.createObjectURL(file);
+            });
+
+            return {
+              imageUrl: uploadResult.imageUrl!,
+              imageFilename: file.name,
+              imageWidth: img.naturalWidth,
+              imageHeight: img.naturalHeight
+            };
+          })
+        );
+
+        console.log('Adding all images to project...');
+
+        // Batch add all images to project via backend
         if (projectId) {
-          const updatedProject = await projectService.addImageToProject(projectId, imageData);
+          const updatedProject = await projectService.batchAddImagesToProject(projectId, imagesData);
           
           // Update local project state
           setProject(updatedProject);
 
-          // Add new file to active files and switch to it
-          const newImage = updatedProject.images[updatedProject.images.length - 1];
-          const newFile: ActiveFile = {
-            id: newImage._id,
-            name: newImage.filename,
-            isActive: true, // Auto-switch to new image
-            imageUrl: newImage.url,
-            width: newImage.width,
-            height: newImage.height
-          };
+          // Create new active files for all added images
+          const newImages = updatedProject.images.slice(-imagesData.length);
+          const newActiveFiles: ActiveFile[] = newImages.map((image, index) => ({
+            id: image._id,
+            name: image.filename,
+            isActive: index === 0, // Only first image is active
+            imageUrl: image.url,
+            width: image.width,
+            height: image.height
+          }));
 
-          // Set all existing files to inactive, then add new active file
+          // Set all existing files to inactive, then add new files
           setActiveFiles(prev => [
             ...prev.map(file => ({ ...file, isActive: false })),
-            newFile
+            ...newActiveFiles
           ]);
 
-          console.log('Image added successfully!');
+          console.log(`Successfully added ${imagesData.length} images!`);
         }
-
-        // Clean up
-        URL.revokeObjectURL(img.src);
-        
       } catch (err) {
-        console.error('Failed to add image:', err);
-        alert(err instanceof Error ? err.message : 'Failed to add image');
+        console.error('Error uploading images:', err);
+        alert(err instanceof Error ? err.message : 'Failed to upload images');
       } finally {
         setIsUploadingImage(false);
       }
     };
 
-    // Trigger file selection
     input.click();
   };
 

@@ -343,6 +343,46 @@ async createProject(projectData: ProjectData): Promise<Project> {
   }
 
   /**
+   * Batch add multiple images to existing project
+   */
+  async batchAddImagesToProject(
+    projectId: string,
+    imagesData: Array<{
+      imageUrl: string;
+      imageFilename: string;
+      imageWidth: number;
+      imageHeight: number;
+    }>
+  ): Promise<Project> {
+    try {
+      console.log('ProjectService: Batch adding images to project', projectId, imagesData.length);
+      
+      const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/images/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ images: imagesData }),
+      });
+
+      console.log('Batch add images response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Batch add images error response:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Images batch added successfully:', data.addedImages.length);
+      return data.project;
+    } catch (error) {
+      console.error('Error batch adding images to project:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Convert backend project format to dashboard card format
    */
   convertToCardFormat(project: Project): {

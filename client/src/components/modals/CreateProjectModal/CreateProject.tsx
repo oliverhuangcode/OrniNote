@@ -1,6 +1,5 @@
-// client/src/components/modals/CreateProjectModal/CreateProject.tsx
 import { useState } from "react";
-import { useS3Upload } from "../../../services/s3UploadService";
+import { useS3Upload, s3UploadService } from "../../../services/s3UploadService";
 
 interface CreateProjectProps {
   isOpen: boolean;
@@ -13,7 +12,21 @@ interface ProjectData {
   width: number;
   height: number;
   imageUrl?: string;
+  imageFilename?: string;
   teamMembers: string[];
+  additionalImages?: Array<{
+    imageUrl: string;
+    imageFilename: string;
+    imageWidth: number;
+    imageHeight: number;
+  }>;
+}
+
+interface ImageData {
+  file: File;
+  previewUrl: string;
+  width: number;
+  height: number;
 }
 
 const teamMembers = [
@@ -31,11 +44,16 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
   });
   
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
+  const [selectedImages, setSelectedImages] = useState<ImageData[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    fileName: string;
+  } | null>(null);
+
   // Use the S3 upload hook
-  const { isUploading, progress, error, uploadImage, resetUpload } = useS3Upload();
+  const { error, resetUpload } = useS3Upload();
 
   // Don't render if modal is not open
   if (!isOpen) return null;
@@ -54,103 +72,197 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      handleFileSelection(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleFiles(Array.from(e.dataTransfer.files));
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      handleFileSelection(file);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await handleFiles(Array.from(e.target.files));
     }
   };
 
-  const handleFileSelection = (file: File) => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file.');
-      return;
-    }
+  const handleFiles = async (files: File[]) => {
+    try {
+      setIsProcessing(true);
 
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB.');
-      return;
-    }
+      // Separate zip files and image files
+      const zipFiles: File[] = [];
+      const imageFiles: File[] = [];
+      
+      for (const file of files) {
+        if (file.name.toLowerCase().endsWith('.zip')) {
+          zipFiles.push(file);
+        } else {
+          imageFiles.push(file);
+        }
+      }
 
-    setSelectedFile(file);
+      // Extract images from zip files
+      for (const zipFile of zipFiles) {
+        console.log('Extracting images from zip:', zipFile.name);
+        const extractedImages = await s3UploadService.extractImagesFromZip(zipFile);
+        imageFiles.push(...extractedImages);
+        console.log(`Extracted ${extractedImages.length} images from ${zipFile.name}`);
+      }
+
+      if (imageFiles.length === 0) {
+        alert('No valid image files found');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Validate all files
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      for (const file of imageFiles) {
+        if (!file.type.startsWith('image/') && !validTypes.includes(file.type)) {
+          alert(`Invalid file type: ${file.name} (${file.type}). Please upload only image files.`);
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      // Create preview data for all images
+      const imageDataArray: ImageData[] = await Promise.all(
+        imageFiles.map(async (file) => {
+          const img = new Image();
+          const previewUrl = URL.createObjectURL(file);
+          
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = previewUrl;
+          });
+
+          return {
+            file,
+            previewUrl,
+            width: img.naturalWidth,
+            height: img.naturalHeight
+          };
+        })
+      );
+
+      // Set the first image's dimensions as project dimensions
+      if (imageDataArray.length > 0) {
+        setProjectData(prev => ({
+          ...prev,
+          width: imageDataArray[0].width,
+          height: imageDataArray[0].height
+        }));
+      }
+
+      setSelectedImages(imageDataArray);
+      resetUpload();
+    } catch (err) {
+      console.error('Error processing files:', err);
+      alert(err instanceof Error ? err.message : 'Failed to process files');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => {
+      const newImages = [...prev];
+      URL.revokeObjectURL(newImages[index].previewUrl);
+      newImages.splice(index, 1);
+      
+      // Update dimensions if we removed the first image
+      if (index === 0 && newImages.length > 0) {
+        setProjectData(prev => ({
+          ...prev,
+          width: newImages[0].width,
+          height: newImages[0].height
+        }));
+      }
+      
+      return newImages;
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Create preview URL
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    
-    // Clear any previous errors
-    resetUpload();
-
-    // Auto-populate image dimensions if possible
-    const img = new Image();
-    img.onload = () => {
-      setProjectData(prev => ({
-        ...prev,
-        width: img.naturalWidth,
-        height: img.naturalHeight
-      }));
-    };
-    img.src = url;
-  };
-
-  // In CreateProject.tsx, update the handleSubmit function:
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  // Validate required fields
-  if (!projectData.name.trim()) {
-    alert('Project name is required.');
-    return;
-  }
-
-  if (!selectedFile) {
-    alert('Please select an image file.');
-    return;
-  }
-  
-  let imageUrl = projectData.imageUrl;
-  
-  // Upload image if one is selected
-  if (selectedFile) {
-    const uploadResult = await uploadImage(selectedFile);
-    if (!uploadResult) {
-      // Upload failed, error is already set in the hook
+    // Validate required fields
+    if (!projectData.name.trim()) {
+      alert('Project name is required.');
       return;
     }
-    imageUrl = uploadResult;
-  }
-  
-  const finalProjectData = {
-    ...projectData,
-    imageUrl,
-    imageFilename: selectedFile?.name || 'uploaded-image.jpg', // Use actual filename
+
+    if (selectedImages.length === 0) {
+      alert('Please select at least one image file.');
+      return;
+    }
+    
+    try {
+      setIsProcessing(true);
+
+      // Upload all images to S3
+      console.log(`Uploading ${selectedImages.length} images...`);
+      const uploadedImages: Array<{
+        imageUrl: string;
+        imageFilename: string;
+        imageWidth: number;
+        imageHeight: number;
+      }> = [];
+
+      for (let i = 0; i < selectedImages.length; i++) {
+        const imageData = selectedImages[i];
+        setUploadProgress({
+          current: i + 1,
+          total: selectedImages.length,
+          fileName: imageData.file.name
+        });
+
+        const uploadResult = await s3UploadService.uploadImage(imageData.file);
+        
+        if (!uploadResult.success || !uploadResult.imageUrl) {
+          throw new Error(uploadResult.error || `Failed to upload ${imageData.file.name}`);
+        }
+
+        uploadedImages.push({
+          imageUrl: uploadResult.imageUrl,
+          imageFilename: imageData.file.name,
+          imageWidth: imageData.width,
+          imageHeight: imageData.height
+        });
+      }
+
+      console.log('All images uploaded to S3 successfully');
+
+      // Prepare project data with first image and additional images
+      const finalProjectData: ProjectData = {
+        ...projectData,
+        imageUrl: uploadedImages[0].imageUrl,
+        imageFilename: uploadedImages[0].imageFilename,
+        width: uploadedImages[0].imageWidth,
+        height: uploadedImages[0].imageHeight,
+        additionalImages: uploadedImages.slice(1) // All images except the first
+      };
+      
+      // Call the parent's create project handler
+      await onCreateProject(finalProjectData);
+      handleClose();
+    } catch (err) {
+      console.error('Error creating project:', err);
+      alert(err instanceof Error ? err.message : 'Failed to create project');
+    } finally {
+      setIsProcessing(false);
+      setUploadProgress(null);
+    }
   };
-  
-  // Call the parent's create project handler
-  await onCreateProject(finalProjectData);
-  handleClose();
-};
 
   const handleClose = () => {
-    // Cleanup preview URL to prevent memory leaks
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    setSelectedFile(null);
+    // Cleanup preview URLs to prevent memory leaks
+    selectedImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+    setSelectedImages([]);
     resetUpload();
     
     // Reset form data
@@ -190,6 +302,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-700 text-2xl"
+            disabled={isProcessing}
           >
             ×
           </button>
@@ -209,7 +322,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           {/* Image Upload */}
           <div>
             <label className="font-inter font-bold text-lg text-black mb-2 block">
-              Upload Image
+              Upload Images
             </label>
             <div
               className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -222,57 +335,61 @@ const handleSubmit = async (e: React.FormEvent) => {
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
-              {previewUrl ? (
+              {selectedImages.length > 0 ? (
                 <div className="space-y-4">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="mx-auto max-h-48 rounded-lg"
-                  />
-                  <div className="text-sm text-gray-600">
-                    <p className="font-medium">{selectedFile?.name}</p>
-                    <p>{selectedFile && formatFileSize(selectedFile.size)}</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {selectedImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image.previewUrl}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (previewUrl) {
-                        URL.revokeObjectURL(previewUrl);
-                        setPreviewUrl(null);
-                      }
-                      setSelectedFile(null);
-                      resetUpload();
-                    }}
-                    className="text-red-600 hover:text-red-800 text-sm underline"
-                  >
-                    Remove Image
-                  </button>
+                  <p className="text-sm text-gray-600 mt-4">
+                    {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                  </p>
+                  <label className="cursor-pointer">
+                    <span className="bg-green-600 text-white mt-4 px-4 py-2 rounded-lg hover:bg-green-700 transition-colors inline-block">
+                      Add More Images
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,application/zip,.zip"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isProcessing}
+                    />
+                  </label>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="text-gray-500">
-                    <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div className="space-y-3">
+                  <div className="text-gray-400 text-sm">
+                    Add images or a zip file here
                   </div>
-                  <div className="text-lg font-medium text-gray-900">
-                    Drag and drop an image here
-                  </div>
-                  <p className="text-gray-500">or</p>
                   <label className="cursor-pointer">
-                    <span className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors inline-block">
+                    <span className="bg-green-600 text-white mt-4 px-4 py-2 rounded-lg hover:bg-green-700 transition-colors inline-block">
                       Browse Files
                     </span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,application/zip,.zip"
+                      multiple
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={isProcessing}
                     />
                   </label>
-                  <p className="text-xs text-gray-400 mt-2">
-                    PNG, JPG, GIF up to 10MB
-                  </p>
                 </div>
               )}
             </div>
@@ -290,6 +407,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="Enter project name"
               required
+              disabled={isProcessing}
             />
           </div>
 
@@ -307,6 +425,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-green-500"
                 min="1"
                 required
+                disabled={isProcessing}
               />
             </div>
 
@@ -322,6 +441,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 className="w-full px-3 py-2 bg-gray-200 rounded border-none font-inter text-black focus:outline-none focus:ring-2 focus:ring-green-500"
                 min="1"
                 required
+                disabled={isProcessing}
               />
             </div>
           </div>
@@ -356,36 +476,54 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
           </div>
 
-          {/* Progress Bar */}
-          {isUploading && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Uploading...</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
-            </div>
-          )}
-
-          {/* Create Button */}
-          <button
-            type="submit"
-            disabled={isUploading || !selectedFile}
-            className={`w-full font-inter font-bold text-lg py-3 rounded-lg transition-all duration-200 shadow-lg ${
-              isUploading || !selectedFile
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-          >
-            {isUploading ? `Uploading... ${Math.round(progress)}%` : 'Create Project'}
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              disabled={isProcessing}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isProcessing || selectedImages.length === 0}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {isProcessing ? 'Creating...' : 'Create Project'}
+            </button>
+          </div>
         </form>
       </div>
+      {/* Upload Progress Overlay */}
+      {isProcessing && uploadProgress && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                <span className="text-gray-900 font-medium">
+                  {isProcessing && !uploadProgress ? 'Processing files...' : 'Uploading images...'}
+                </span>
+              </div>
+              {uploadProgress && (
+                <>
+                  <div className="text-sm text-gray-600">
+                    {uploadProgress.current} of {uploadProgress.total}: {uploadProgress.fileName}
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
