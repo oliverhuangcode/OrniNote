@@ -60,7 +60,8 @@ const shapeDataSchema = new Schema({
     required: true,
     validate: {
       validator: function(coords) {
-        const type = this.parseInt().type;
+        // const type = this.parseInt().type;
+        const type = this.parent().type;
         
         switch(type) {
           case 'rectangle':

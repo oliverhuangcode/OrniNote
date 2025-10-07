@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getAuthHeaders } from "../../../utils/apiHelper";
 
 interface ShareProjectProps {
   isOpen: boolean;
@@ -19,23 +20,35 @@ interface TeamMember {
 type ShareRole = "Viewer" | "Editor";
 const RoleOptions: ShareRole[] = ["Viewer", "Editor"];
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+
 export default function ShareProject({ isOpen, onClose, projectId, projectName}: ShareProjectProps) {
   const [email, setEmail] = useState("");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<TeamMember[]>([]);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetches from backend when project changes 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !projectId) return;
 
+    const fetchProjectData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          headers: getAuthHeaders(),
+        });
 
-    fetch(`/api/projects/${projectId}`)  
-      .then(res => res.json())
-      .then(data => {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch project: ${response.status}`);
+        }
 
-        // Extract project 
+        const data = await response.json();
         const project = data.project;
         
         // Fetch active collaborators
@@ -45,39 +58,55 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
           role: c.role,
           color: "#3A96FF", 
           initial: c.user.username.charAt(0).toUpperCase(),
-          status: "Active",
+          status: "Active" as const,
         }));
 
         // Fetch pending invites
-        const pendingMembers = (project.invites || []).filter((i: any) => i.status === "Pending").map((invite: any) => ({
-          id: invite._id,
-          name: invite.email,
-          role: invite.role || "Viewer",
-          color: "#A0AEC0",
-          initial: invite.email.charAt(0).toUpperCase(),
-          status: "Pending",
-        }));
+        const pendingMembers = (project.invites || [])
+          .filter((i: any) => i.status === "Pending")
+          .map((invite: any) => ({
+            id: invite._id,
+            name: invite.email,
+            role: invite.role || "Viewer",
+            color: "#A0AEC0",
+            initial: invite.email.charAt(0).toUpperCase(),
+            status: "Pending" as const,
+          }));
         
         setTeamMembers(activeMembers);
         setPendingInvites(pendingMembers);
-      })
-      .catch(err => console.error("Failed to fetch project:", err));
+      } catch (err) {
+        console.error("Failed to fetch project:", err);
+        setError(err instanceof Error ? err.message : "Failed to load project data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjectData();
   }, [isOpen, projectId]);
 
   const handleInvite = async () => {
     if (!email.trim()) return;
 
     try {
+      setError(null);
+      
       // Send invite request to backend
-      const response = await fetch('/api/invite', {
+      const response = await fetch(`${API_BASE_URL}/invite`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           email,
           projectId,
           projectName
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send invite');
+      }
 
       const result = await response.json();
 
@@ -88,10 +117,10 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
         setPendingInvites(prev => [
           ...prev,
           {
-            id: result.inviteId,
+            id: result.inviteId || Date.now().toString(),
             name: email,
             role: "Viewer",
-            color: "#A0AEC0", // gray for pending members
+            color: "#A0AEC0",
             initial: email.charAt(0).toUpperCase(),
             status: "Pending"
           },
@@ -99,47 +128,60 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
 
         setEmail(""); // clear input
       } else {
-        alert("Failed to send invite: " + result.message);
+        throw new Error(result.message || 'Failed to send invite');
       }
     } catch (err) {
-      console.error(err);
-      alert("Error sending invitation.");
+      console.error("Error sending invite:", err);
+      const errorMessage = err instanceof Error ? err.message : "Error sending invitation.";
+      setError(errorMessage);
+      alert(errorMessage);
     }
   };
 
   const handleRoleChange = async (memberId: string, newRole: "Editor" | "Viewer") => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/collaborators/${memberId}`, {
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/collaborators/${memberId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ role: newRole }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || errorData.error || 'Failed to update role');
+      }
 
       const result = await response.json();
 
       // Update UI
-      if (result.success){
+      if (result.success) {
         setTeamMembers(prev =>
           prev.map(member =>
             member.id === memberId ? { ...member, role: newRole } : member
           )
         );
       } else {
-        alert("Failed to update role: " + (result.message || result.error));
+        throw new Error(result.message || result.error || 'Failed to update role');
       }
     } catch (err) {
-      console.error(err);
-      alert("Error updating role");
+      console.error("Error updating role:", err);
+      const errorMessage = err instanceof Error ? err.message : "Error updating role";
+      setError(errorMessage);
+      alert(errorMessage);
     }
-};
+  };
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const projectUrl = `${window.location.origin}/annotation/${projectId}`;
+      await navigator.clipboard.writeText(projectUrl);
       setShowCopySuccess(true);
       setTimeout(() => setShowCopySuccess(false), 2000);
     } catch (err) {
       console.error("Failed to copy link:", err);
+      alert("Failed to copy link to clipboard");
     }
   };
 
@@ -203,6 +245,20 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
         {/* Divider */}
         <div className="w-full h-px bg-gray-300 mb-6"></div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="mb-4 text-center text-gray-500">
+            Loading team members...
+          </div>
+        )}
+
         {/* Email Input */}
         <div className="flex gap-3 mb-6">
           <div className="flex-1 relative">
@@ -216,7 +272,8 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
           </div>
           <button
             onClick={handleInvite}
-            className="px-5 py-2 bg-ml-green text-white text-sm font-inter rounded-lg hover:bg-opacity-90 transition-colors"
+            disabled={!email.trim() || loading}
+            className="px-5 py-2 bg-ml-green text-white text-sm font-inter rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Invite
           </button>

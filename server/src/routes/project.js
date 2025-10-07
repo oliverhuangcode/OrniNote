@@ -508,4 +508,9 @@ router.post('/:projectId/images/batch', async (req, res) => {
   }
 });
 
+router.get('/debug/all', async (req, res) => {
+  const projects = await Project.find({}).populate('owner');
+  res.json({ count: projects.length, projects });
+});
+
 export default router;

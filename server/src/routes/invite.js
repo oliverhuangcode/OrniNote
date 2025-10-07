@@ -41,7 +41,11 @@ router.post("/", async (req, res) => {
         const inviteLink = `http://localhost:3000/accept-invite?token=${token}`;
         await sendInvite(email, projectName, inviteLink);
 
-        res.status(200).json({ success: true, message: 'Invite sent!' });
+        res.status(200).json({ 
+            success: true, 
+            message: 'Invite sent!',
+            inviteId: invite._id  // Add this line
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Failed to send invite' });
