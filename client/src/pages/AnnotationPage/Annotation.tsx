@@ -28,8 +28,6 @@ type CursorPosition = {
 
 type Presence = {
   cursor: CursorPosition | null;
-  selectedTool?: string;
-  selectedColor?: string;
 };
 
 // Declare module to extend Liveblocks types
@@ -469,7 +467,6 @@ export default function Annotation() {
           ]);
 
           console.log(`Successfully added ${imagesData.length} images!`);
-          // REMOVED: alert(`Successfully uploaded ${imagesData.length} image(s)`);
         }
       } catch (err) {
         console.error('Error uploading images:', err);
@@ -484,22 +481,10 @@ export default function Annotation() {
 
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
-    // Update presence to share selected tool with others
-    updateMyPresence({ 
-      cursor,
-      selectedTool: toolId,
-      selectedColor 
-    });
   };
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
-    // Update presence to share selected color with others
-    updateMyPresence({ 
-      cursor,
-      selectedTool,
-      selectedColor: color 
-    });
   };
 
   const handleCanvasZoom = (direction: "in" | "out" | "reset") => {
@@ -520,18 +505,13 @@ export default function Annotation() {
         x: Math.round(event.clientX - rect.left),
         y: Math.round(event.clientY - rect.top),
       },
-      selectedTool,
-      selectedColor,
     });
   };
-
 
   // Handle mouse leave to hide cursor
   const handlePointerLeave = () => {
     updateMyPresence({ 
       cursor: null,
-      selectedTool,
-      selectedColor 
     });
   };
 
@@ -800,8 +780,6 @@ export function AnnotationCanvas() {
         id={roomId}
         initialPresence={{ 
           cursor: null,
-          selectedTool: "move",
-          selectedColor: "#3B3B3B"
         }}
       >
         <Annotation />
