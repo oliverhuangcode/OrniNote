@@ -140,3 +140,19 @@ export const getLabelsByProject = (projectId: number): Label[] => {
 
 // Current user (for testing)
 export const CURRENT_USER: User = MOCK_USERS[0];
+
+const ADJECTIVES = [
+  'Happy', 'Clever', 'Swift', 'Brave', 'Calm', 'Bright', 
+  'Cheerful', 'Daring', 'Eager', 'Fancy', 'Gentle', 'Jolly'
+];
+
+const ANIMALS = [
+  'Cat', 'Dog', 'Fox', 'Bear', 'Panda', 'Rabbit', 
+  'Tiger', 'Lion', 'Penguin', 'Dolphin', 'Koala', 'Otter'
+];
+
+export function getAnonymousName(connectionId: number): string {
+  const adjective = ADJECTIVES[connectionId % ADJECTIVES.length];
+  const animal = ANIMALS[Math.floor(connectionId / ADJECTIVES.length) % ANIMALS.length];
+  return `${adjective} ${animal}`;
+}

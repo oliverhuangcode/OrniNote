@@ -18,6 +18,7 @@ import { annotationService } from '../../services/annotationService';
 import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels";
 import LabelSelector from "./components/LabelSelector";
 import { labelService, Label } from '../../services/labelService';  
+import { getAnonymousName } from "../../utils/mockData";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -725,31 +726,27 @@ export default function Annotation() {
         {others.map(({ connectionId, presence }) => {
           if (!presence?.cursor) return null;
           
+          const anonymousName = getAnonymousName(connectionId);
+          const cursorColor = CURSOR_COLORS[connectionId % CURSOR_COLORS.length];
+          
           return (
             <div key={`cursor-${connectionId}`} className="absolute pointer-events-none z-50">
               <Cursor
-                color={CURSOR_COLORS[connectionId % CURSOR_COLORS.length]}
+                color={cursorColor}
                 x={presence.cursor.x}
                 y={presence.cursor.y}
               />
-              {/* Show other users' selected tools */}
-              {presence.selectedTool && (
-                <div 
-                  className="absolute bg-black/80 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap"
-                  style={{
-                    left: presence.cursor.x + 20,
-                    top: presence.cursor.y - 30
-                  }}
-                >
-                  Tool: {presence.selectedTool}
-                  {presence.selectedColor && (
-                    <span 
-                      className="inline-block w-3 h-3 rounded-sm ml-2 border border-white/30"
-                      style={{ backgroundColor: presence.selectedColor }}
-                    />
-                  )}
-                </div>
-              )}
+              {/* Figma-style name label */}
+              <div 
+                className="absolute text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium"
+                style={{
+                  left: presence.cursor.x,
+                  top: presence.cursor.y + 20,
+                  backgroundColor: cursorColor,
+                }}
+              >
+                {anonymousName}
+              </div>
             </div>
           );
         })}
