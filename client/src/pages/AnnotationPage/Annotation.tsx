@@ -84,8 +84,8 @@ interface ProjectData {
 
 export default function Annotation() {
   const { id: projectId } = useParams();
+  const { user, signout } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth(); // ADD THIS
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
 
@@ -670,6 +670,8 @@ export default function Annotation() {
         onAddImage={handleAddImage}
         others={others}
         cursorColors={CURSOR_COLORS}
+        currentUser={user ? { username: user.username, email: user.email } : undefined} // ADD THIS
+        onSignOut={signout} // ADD THIS
       />
 
       {/* Label Selector */}
