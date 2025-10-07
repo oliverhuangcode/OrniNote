@@ -61,20 +61,11 @@ export default function Dashboard() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Load projects from backend
-  // useEffect(() => {
-  //   loadProjects();
-  // }, []);
-
-  // useEffect(() => {
-  //   loadProjects();
-  // }, [currentView]);
-
   useEffect(() => {
     if (user) {
       loadProjects();
     }
-  }, [user]);
+  }, [user, currentView]); // ADD currentView here
 
   if (!user) {
     return (
@@ -90,29 +81,39 @@ export default function Dashboard() {
   const getUserInitial = () => {
       return user.username.charAt(0).toUpperCase();
     };
-
+  
   const loadProjects = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-      const fetchedProjects = await projectService.getUserProjects(user._id); // Use real user ID
       setError(null);
-      
       
       let backendProjects;
       
-      // Load different projects based on current view
       if (currentView === 'deleted') {
         backendProjects = await projectService.getDeletedProjects(user._id);
+      } else if (currentView === 'shared') {
+        backendProjects = await projectService.getSharedProjects(user._id);
       } else {
         backendProjects = await projectService.getUserProjects(user._id);
+        // Filter to only owned projects
+        backendProjects = backendProjects.filter(p => p.owner._id === user._id);
       }
       
-      // Convert backend projects to dashboard card format
-      const formattedProjects = backendProjects.map(project => 
-        projectService.convertToCardFormat(project)
-      );
+      const formattedProjects = backendProjects.map(project => {
+        const formatted = projectService.convertToCardFormat(project);
+        
+        if (currentView === 'shared') {
+          return {
+            ...formatted,
+            isShared: true,
+            sharedBy: project.owner.username
+          };
+        }
+        
+        return formatted;
+      });
       
       setProjects(formattedProjects);
     } catch (err) {
@@ -122,6 +123,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
 
 const handleCreateProject = async (projectData: ProjectData) => {
   if (!user) {

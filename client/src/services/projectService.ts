@@ -180,6 +180,36 @@ class ProjectService {
   }
 
   /**
+ * Get projects shared with a user (where user is collaborator but not owner)
+ */
+  async getSharedProjects(userId: string): Promise<Project[]> {
+    try {
+      console.log('ProjectService: Fetching shared projects for user:', userId);
+      
+      const response = await fetch(`${this.apiBaseUrl}/projects/user/${userId}/shared`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      console.log('Get shared projects response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Get shared projects error response:', errorData);
+        if (response.status === 401) handleAuthError(response);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: GetProjectsResponse = await response.json();
+      console.log(`Found ${data.projects.length} shared projects for user ${userId}`);
+      return data.projects;
+    } catch (error) {
+      console.error('Error fetching shared projects:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update project details
    */
   async updateProject(projectId: string, updates: { name?: string; description?: string }): Promise<Project> {

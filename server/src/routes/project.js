@@ -155,6 +155,28 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Get projects shared with user
+router.get('/user/:userId/shared', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const projects = await Project.find({
+      'collaborators.user': userId,
+      owner: { $ne: userId }, // Owner is NOT this user
+      deletedAt: null
+    })
+      .populate('owner', 'username email')
+      .populate('collaborators.user', 'username email')
+      .populate('images')
+      .sort({ updatedAt: -1 });
+
+    res.json({ projects });
+  } catch (error) {
+    console.error('Error fetching shared projects:', error);
+    res.status(500).json({ error: 'Failed to fetch shared projects' });
+  }
+});
+
 // Get projects for a user
 router.get('/user/:userId', async (req, res) => {
   try {
