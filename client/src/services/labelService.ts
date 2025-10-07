@@ -1,16 +1,12 @@
+import { getAuthHeaders, handleAuthError } from '../utils/apiHelper';
+
 export interface Label {
   _id: string;
-  projectId: string;
   name: string;
   colour: string;
+  projectId: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface CreateLabelData {
-  projectId: string;
-  name: string;
-  colour: string;
 }
 
 class LabelService {
@@ -20,49 +16,16 @@ class LabelService {
     this.apiBaseUrl = apiBaseUrl;
   }
 
-  /**
-   * Create a new label
-   */
-  async createLabel(labelData: CreateLabelData): Promise<Label> {
-    try {
-      console.log('Creating label:', labelData);
-      
-      const response = await fetch(`${this.apiBaseUrl}/labels`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(labelData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Label created:', data.label);
-      return data.label;
-    } catch (error) {
-      console.error('Error creating label:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all labels for a project
-   */
   async getLabelsForProject(projectId: string): Promise<Label[]> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/labels/project/${projectId}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
@@ -74,21 +37,39 @@ class LabelService {
     }
   }
 
-  /**
-   * Update a label
-   */
+  async createLabel(labelData: { name: string; colour: string; projectId: string }): Promise<Label> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/labels`, {
+        method: 'POST',
+        headers: getAuthHeaders(), // UPDATED
+        body: JSON.stringify(labelData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 401) handleAuthError(response); // ADDED
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.label;
+    } catch (error) {
+      console.error('Error creating label:', error);
+      throw error;
+    }
+  }
+
   async updateLabel(labelId: string, updates: { name?: string; colour?: string }): Promise<Label> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/labels/${labelId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
         body: JSON.stringify(updates),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
@@ -100,20 +81,16 @@ class LabelService {
     }
   }
 
-  /**
-   * Delete a label
-   */
   async deleteLabel(labelId: string): Promise<void> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/labels/${labelId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
@@ -125,4 +102,4 @@ class LabelService {
   }
 }
 
-export const labelService = new LabelService(); 
+export const labelService = new LabelService();

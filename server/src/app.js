@@ -2,14 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectToDB from '../config/db.js';
-import { User } from '../models/users.js';
 
 // Import route handlers
+import authRoutes from './routes/auth.js';  // ADD THIS
 import uploadRoutes from './routes/upload.js';
 import projectRoutes from './routes/project.js';
 import inviteRoutes from './routes/invite.js';
-import annotationRoutes from './routes/annotation.js'
-import labelRoutes from './routes/label.js'
+import annotationRoutes from './routes/annotation.js';
+import labelRoutes from './routes/label.js';
 
 // Load environment variables
 dotenv.config();
@@ -46,58 +46,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/test', (req, res) => {
-  res.json({
-    message: 'Backend is connected!',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Test user creation endpoint
-app.post('/api/test-user', async (req, res) => {
-  try {
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      username: "testingglobalorninoteaccount"
-    });
-
-    if (existingUser) {
-      return res.json({
-        message: 'Test user already exists',
-        user: existingUser
-      });
-    }
-
-    const user1 = new User({
-      username: "testingglobalorninoteaccount2",
-      password: "orninote2",
-      email: "orninote2@gmail.com"
-    });
-
-    const savedUser = await user1.save();
-    console.log('User created:', savedUser);
-
-    res.json({
-      message: 'Test user created successfully',
-      user: savedUser
-    });
-  } catch (error) {
-    console.error('Error creating test user:', error);
-    res.status(500).json({
-      error: 'Failed to create test user',
-      message: error.message
-    });
-  }
-});
-
-// API Routes (BEFORE error handlers)
+// API Routes
+app.use('/api/auth', authRoutes);  // ADD THIS
 app.use('/api/upload', uploadRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/annotations', annotationRoutes);
 app.use('/api/labels', labelRoutes);
 
-// Error handling middleware (AFTER all routes)
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({
@@ -106,7 +63,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler (LAST)
+// 404 handler
 app.use('*', (req, res) => {
   console.log('404 - Route not found:', req.originalUrl);
   res.status(404).json({
@@ -115,57 +72,16 @@ app.use('*', (req, res) => {
   });
 });
 
-async function testUserCreation() {
-  try {
-    console.log('\n📝 Testing user creation...');
-
-    // Check if user already exists first
-    const existingUser = await User.findOne({
-      username: "checkingcombined"
-    });
-
-    if (existingUser) {
-      console.log('ℹ️  Test user already exists:', existingUser.username);
-      return;
-    }
-
-    const user1 = new User({
-      username: "checkingcombined",
-      password: "combined",
-      email: "comb@gmail.com"
-    });
-
-    const savedUser = await user1.save();
-    console.log('✅ User created:', {
-      id: savedUser._id,
-      username: savedUser.username,
-      email: savedUser.email,
-      createdAt: savedUser.createdAt
-    });
-  } catch (error) {
-    console.error('❌ User creation failed:', error.message);
-  }
-}
-
 // Start server with database connection
 async function startServer() {
   try {
-    // Connect to MongoDB first
     await connectToDB();
     console.log('✓ Database connected successfully');
 
-    // Then start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Auth API: http://localhost:${PORT}/api/auth`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
-      console.log(`Test endpoint: http://localhost:${PORT}/api/test`);
-      console.log(`Projects API: http://localhost:${PORT}/api/projects`);
-      console.log(`Test user creation: http://localhost:${PORT}/api/test-user (POST)`);
-      console.log('AWS Configuration:');
-      console.log(` Region: ${process.env.AWS_REGION || 'ap-southeast-2'}`);
-      console.log(` Bucket: ${process.env.S3_BUCKET_NAME || 'orninote'}`);
-      console.log(` Access Key: ${process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Missing'}`);
-      console.log(` Secret Key: ${process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Missing'}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

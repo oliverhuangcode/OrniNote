@@ -151,8 +151,25 @@ const ANIMALS = [
   'Tiger', 'Lion', 'Penguin', 'Dolphin', 'Koala', 'Otter'
 ];
 
-export function getAnonymousName(connectionId: number): string {
-  const adjective = ADJECTIVES[connectionId % ADJECTIVES.length];
-  const animal = ANIMALS[Math.floor(connectionId / ADJECTIVES.length) % ANIMALS.length];
+// You can now optionally use real usernames if you want to pass user data
+// Or keep the anonymous animal names for privacy
+
+export function getAnonymousName(connectionId: number, username?: string): string {
+  // If you want to show real usernames:
+  if (username) return username;
+  
+  // Otherwise use anonymous names:
+  const adjectives = [
+    'Happy', 'Clever', 'Swift', 'Brave', 'Calm', 'Bright', 
+    'Cheerful', 'Daring', 'Eager', 'Fancy', 'Gentle', 'Jolly'
+  ];
+
+  const animals = [
+    'Cat', 'Dog', 'Fox', 'Bear', 'Panda', 'Rabbit', 
+    'Tiger', 'Lion', 'Penguin', 'Dolphin', 'Koala', 'Otter'
+  ];
+
+  const adjective = adjectives[connectionId % adjectives.length];
+  const animal = animals[Math.floor(connectionId / adjectives.length) % animals.length];
   return `${adjective} ${animal}`;
 }

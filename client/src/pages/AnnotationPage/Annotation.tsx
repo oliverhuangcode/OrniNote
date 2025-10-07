@@ -19,6 +19,7 @@ import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels
 import LabelSelector from "./components/LabelSelector";
 import { labelService, Label } from '../../services/labelService';  
 import { getAnonymousName } from "../../utils/mockData";
+import { useAuth } from "../../contexts/authContext";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -84,6 +85,7 @@ interface ProjectData {
 export default function Annotation() {
   const { id: projectId } = useParams();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth(); // ADD THIS
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
 
@@ -114,7 +116,7 @@ export default function Annotation() {
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
 
-  const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3";
+  // const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3";
 
   // State for current image and label
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
@@ -284,6 +286,12 @@ export default function Annotation() {
         return;
       }
 
+      if (!user) {
+        console.error('Cannot save: No user logged in');
+        alert('You must be logged in to create annotations');
+        return;
+      }
+
       // Map your frontend annotation format to backend format
       let coordinates: any;
       
@@ -319,7 +327,7 @@ export default function Annotation() {
       const savedAnnotation = await annotationService.createAnnotation({
         imageId: currentImageId,
         labelId: currentLabelId,
-        createdBy: CURRENT_USER_ID,
+        createdBy: user._id,
         shapeData
       });
 
@@ -706,7 +714,7 @@ export default function Annotation() {
         {others.map(({ connectionId, presence }) => {
           if (!presence?.cursor) return null;
           
-          const anonymousName = getAnonymousName(connectionId);
+          const anonymousName = getAnonymousName(connectionId, user?.username);
           const cursorColor = CURSOR_COLORS[connectionId % CURSOR_COLORS.length];
           
           return (
@@ -772,7 +780,19 @@ export default function Annotation() {
 export function AnnotationCanvas() {
   // Generate a unique room ID based on project ID or use a default
   const { id: projectId } = useParams();
+  const { user } = useAuth(); // ADD THIS
   const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
+
+  if (!user) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-highlight mx-auto mb-4"></div>
+          <div className="text-xl font-semibold text-gray-900">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LiveblocksProvider publicApiKey="pk_dev_eH0jmBFlrKAt3C8vX8ZZF53cmXb5W6XoCyGx2A9NGCZV3-v2P-gqUav-vAvszF1x">
