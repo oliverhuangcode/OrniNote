@@ -1,5 +1,3 @@
-// client/src/services/projectService.ts
-
 export interface ProjectData {
   name: string;
   description?: string;
@@ -38,6 +36,7 @@ export interface Project {
   }>;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 }
 
 export interface CreateProjectResponse {
@@ -117,6 +116,37 @@ async createProject(projectData: ProjectData): Promise<Project> {
       return data.projects;
     } catch (error) {
       console.error('Error fetching user projects:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get deleted projects for a user
+   */
+  async getDeletedProjects(userId: string): Promise<Project[]> {
+    try {
+      console.log('ProjectService: Fetching deleted projects for user:', userId);
+      
+      const response = await fetch(`${this.apiBaseUrl}/projects/user/${userId}?includeDeleted=true`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Get deleted projects response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Get deleted projects error response:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: GetProjectsResponse = await response.json();
+      console.log(`Found ${data.projects.length} deleted projects for user ${userId}`);
+      return data.projects;
+    } catch (error) {
+      console.error('Error fetching deleted projects:', error);
       throw error;
     }
   }
@@ -273,6 +303,86 @@ async createProject(projectData: ProjectData): Promise<Project> {
   }
 
   /**
+   * Add image to existing project
+   */
+  async addImageToProject(
+    projectId: string, 
+    imageData: {
+      imageUrl: string;
+      imageFilename: string;
+      imageWidth: number;
+      imageHeight: number;
+    }
+  ): Promise<Project> {
+    try {
+      console.log('ProjectService: Adding image to project', projectId, imageData);
+      
+      const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(imageData),
+      });
+
+      console.log('Add image response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Add image error response:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Image added successfully:', data.image);
+      return data.project;
+    } catch (error) {
+      console.error('Error adding image to project:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Batch add multiple images to existing project
+   */
+  async batchAddImagesToProject(
+    projectId: string,
+    imagesData: Array<{
+      imageUrl: string;
+      imageFilename: string;
+      imageWidth: number;
+      imageHeight: number;
+    }>
+  ): Promise<Project> {
+    try {
+      console.log('ProjectService: Batch adding images to project', projectId, imagesData.length);
+      
+      const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/images/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ images: imagesData }),
+      });
+
+      console.log('Batch add images response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Batch add images error response:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Images batch added successfully:', data.addedImages.length);
+      return data.project;
+    } catch (error) {
+      console.error('Error batch adding images to project:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Convert backend project format to dashboard card format
    */
   convertToCardFormat(project: Project): {
@@ -281,6 +391,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
     lastEdited: string;
     thumbnail: string;
     collaborators?: { initial: string; color: string }[];
+    deletedAt?: string | null;
   } {
     // Get the first image as thumbnail
     const thumbnail = project.images.length > 0 
@@ -293,7 +404,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       .slice(0, 3) // Limit to 3 collaborators
       .map((collab, index) => ({
         initial: collab.user.username.charAt(0).toUpperCase(),
-        color: this.getCollaboratorColor(index)
+        color: this.getCollaboratorColor(index)  // CHANGED: Use getCollaboratorColor instead
       }));
 
     // Format last edited time
@@ -304,7 +415,8 @@ async createProject(projectData: ProjectData): Promise<Project> {
       name: project.name,
       lastEdited,
       thumbnail,
-      collaborators: collaborators.length > 0 ? collaborators : undefined
+      collaborators: collaborators.length > 0 ? collaborators : undefined,
+      deletedAt: project.deletedAt || null
     };
   }
 
@@ -329,16 +441,16 @@ async createProject(projectData: ProjectData): Promise<Project> {
     const diffInMinutes = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60));
 
     if (diffInMinutes < 1) return 'Edited just now';
-    if (diffInMinutes < 60) return `Edited ${diffInMinutes} minutes ago`;
+    if (diffInMinutes < 60) return `Edited ${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
     
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `Edited ${diffInHours} hours ago`;
+    if (diffInHours < 24) return `Edited ${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
     
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `Edited ${diffInDays} days ago`;
+    if (diffInDays < 7) return `Edited ${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
     
     const diffInWeeks = Math.floor(diffInDays / 7);
-    return `Edited ${diffInWeeks} weeks ago`;
+    return `Edited ${diffInWeeks} ${diffInWeeks === 1 ? 'week' : 'weeks'} ago`;
   }
 }
 

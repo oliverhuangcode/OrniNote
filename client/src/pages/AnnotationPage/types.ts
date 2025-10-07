@@ -1,5 +1,3 @@
-// client/src/pages/AnnotationPage/types.ts
-
 export interface ActiveFile {
   id: string;
   name: string;
@@ -57,5 +55,16 @@ export interface Annotation {
     
     // Legacy color property (kept for backward compatibility)
     color?: string;
+    labelId?: string;    
+    labelName?: string;   
+    createdBy?: string; 
   };
+}
+
+// Image data interface for uploading
+export interface ImageData {
+  imageUrl: string;
+  imageFilename: string;
+  imageWidth: number;
+  imageHeight: number;
 }

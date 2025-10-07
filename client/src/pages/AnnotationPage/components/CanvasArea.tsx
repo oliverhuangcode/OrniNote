@@ -30,6 +30,7 @@ interface CanvasAreaProps {
   setSelectedAnnotationId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedColor: string;
   projectImage?: ActiveFile; // New prop for project image
+  onAnnotationCreated?: (annotation: Annotation) => void; 
 }
 
 export default function CanvasArea({ 
@@ -45,7 +46,8 @@ export default function CanvasArea({
   selectedAnnotationId, 
   setSelectedAnnotationId, 
   selectedColor, 
-  projectImage 
+  projectImage,
+  onAnnotationCreated  
 }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
@@ -87,8 +89,14 @@ export default function CanvasArea({
     }
   }, [projectImage?.imageUrl, projectImage?.width, projectImage?.height]);
 
-  // Tool hooks (from annotation-tools branch)
-  const addAnnotation = useCallback((a: Annotation) => setAnnotations(prev => [...prev, a]), [setAnnotations]);
+  const addAnnotation = useCallback((a: Annotation) => {
+    setAnnotations(prev => [...prev, a]);
+    // Save to database
+    if (onAnnotationCreated) {
+      onAnnotationCreated(a);
+    }
+  }, [setAnnotations, onAnnotationCreated]);
+
   const textTool = useTextTool(pixelScale, addAnnotation, selectedColor);
   const lineTool = useLineTool(addAnnotation, selectedColor);
   const rectTool = useShapeTool("rectangle", addAnnotation, selectedColor);

@@ -1,4 +1,3 @@
-// server/src/app.js
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -9,6 +8,8 @@ import { User } from '../models/users.js';
 import uploadRoutes from './routes/upload.js';
 import projectRoutes from './routes/project.js';
 import inviteRoutes from './routes/invite.js';
+import annotationRoutes from './routes/annotation.js'
+import labelRoutes from './routes/label.js'
 
 // Load environment variables
 dotenv.config();
@@ -93,6 +94,8 @@ app.post('/api/test-user', async (req, res) => {
 app.use('/api/upload', uploadRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/invite', inviteRoutes);
+app.use('/api/annotations', annotationRoutes);
+app.use('/api/labels', labelRoutes);
 
 // Error handling middleware (AFTER all routes)
 app.use((err, req, res, next) => {
