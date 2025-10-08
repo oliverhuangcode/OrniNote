@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
+import { 
+  LiveblocksProvider, 
+  RoomProvider, 
+  useOthers, 
+  useMyPresence,
+  useStorage,
+  useMutation
+} from "@liveblocks/react";
+import { LiveList } from "@liveblocks/client";
 import { ActiveFile, Layer, ToolbarTool, ImageData } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
 import { projectService } from "../../services/projectService";
@@ -31,17 +39,24 @@ type CursorPosition = {
 
 type Presence = {
   cursor: CursorPosition | null;
+  userInfo: {
+    name: string;
+    email: string;
+  } | null;
 };
 
-// Declare module to extend Liveblocks types
+// Update Liveblocks types to just store annotation IDs
 declare global {
   interface Liveblocks {
     Presence: Presence;
-    Storage: {};
+    Storage: {
+      annotationIds: LiveList<string>;
+    };
     UserMeta: {};
     RoomEvent: {};
   }
 }
+
 
 const CURSOR_COLORS = [
   "#E57373",
@@ -123,6 +138,18 @@ export default function Annotation() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
+  // Liveblocks storage for syncing annotation IDs
+  const annotationIds = useStorage((root) => root.annotationIds);
+  
+  // Mutation to add annotation ID to Liveblocks
+  const addAnnotationId = useMutation(({ storage }, id: string) => {
+    const ids = storage.get("annotationIds");
+    // Only add if not already present
+    if (!ids.toArray().includes(id)) {
+      ids.push(id);
+    }
+  }, []);
+
   // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
@@ -148,6 +175,14 @@ export default function Annotation() {
     }
   }, [activeFiles, currentImageId]);
 
+  // Watch for changes in annotationIds and reload annotations
+  useEffect(() => {
+    if (annotationIds && currentImageId) {
+      console.log('Annotation IDs changed, reloading annotations...');
+      loadAnnotationsForImage(currentImageId);
+    }
+  }, [annotationIds?.length, currentImageId]);
+
   const loadProject = async () => {
     try {
       setLoading(true);
@@ -167,14 +202,13 @@ export default function Annotation() {
         const files: ActiveFile[] = projectData.images.map((image, index) => ({
           id: image._id,
           name: image.filename,
-          isActive: index === 0, // First image is active by default
+          isActive: index === 0,
           imageUrl: image.url,
           width: image.width,
           height: image.height
         }));
         setActiveFiles(files);
       } else {
-        // No images in project
         setActiveFiles([]);
       }
 
@@ -198,10 +232,9 @@ export default function Annotation() {
       const fetchedLabels = await labelService.getLabelsForProject(projectId);
       setLabels(fetchedLabels);
       
-      // Set first label as default if available and none is selected
       if (fetchedLabels.length > 0 && !currentLabelId) {
         setCurrentLabelId(fetchedLabels[0]._id);
-        setSelectedColor(fetchedLabels[0].colour); // Also update the color
+        setSelectedColor(fetchedLabels[0].colour);
         console.log('Auto-selected first label:', fetchedLabels[0].name);
       } else if (fetchedLabels.length === 0) {
         console.warn('No labels found. Create labels before annotating.');
@@ -215,7 +248,6 @@ export default function Annotation() {
     setCurrentLabelId(labelId);
     console.log('Selected label:', labelId);
     
-    // Update the selected color to match the label's color
     const selectedLabel = labels.find(l => l._id === labelId);
     if (selectedLabel) {
       setSelectedColor(selectedLabel.colour);
@@ -226,7 +258,6 @@ export default function Annotation() {
   const handleLabelsChanged = async () => {
     await loadLabels();
     
-    // If a label is currently selected, update the color to match
     if (currentLabelId) {
       const selectedLabel = labels.find(l => l._id === currentLabelId);
       if (selectedLabel) {
@@ -241,7 +272,6 @@ export default function Annotation() {
       console.log('Loading annotations for image:', imageId);
       const fetchedAnnotations = await annotationService.getAnnotationsForImage(imageId);
       
-      // Convert backend format to your frontend annotation format
       const convertedAnnotations: AnnotationType[] = fetchedAnnotations.map(ann => {
         let properties: any = {
           style: {
@@ -250,7 +280,6 @@ export default function Annotation() {
           }
         };
 
-        // Convert backend coordinates to frontend format
         if (ann.shapeData.type === 'rectangle') {
           properties.position = {
             x: ann.shapeData.coordinates.x,
@@ -304,7 +333,6 @@ export default function Annotation() {
       if (!currentImageId || !currentLabelId) {
         console.error('Cannot save: No image or label selected');
         alert('Please select a label before creating annotations. Click "Manage Labels" to create labels first.');
-        // Remove the unsaved annotation from UI
         setAnnotations(prev => prev.filter(ann => ann.id !== annotation.id));
         return;
       }
@@ -315,11 +343,9 @@ export default function Annotation() {
         return;
       }
 
-      // Map your frontend annotation format to backend format
       let coordinates: any;
 
       if (annotation.type === 'rectangle' && annotation.properties.position) {
-        // Convert frontend rectangle format to backend format
         coordinates = {
           x: annotation.properties.position.x,
           y: annotation.properties.position.y,
@@ -327,22 +353,18 @@ export default function Annotation() {
           height: annotation.properties.height || 0
         };
       } else if (annotation.type === 'polygon' && annotation.properties.points) {
-        // Convert frontend polygon format to backend format
         coordinates = {
           points: annotation.properties.points.map((p: any) => [p.x, p.y])
         };
       } else if (annotation.type === 'line' && annotation.properties.points) {
-        // Convert frontend line format to backend format
         coordinates = {
           points: annotation.properties.points.map((p: any) => [p.x, p.y])
         };
       } else if ((annotation.type === 'path' || annotation.type === 'brush') && annotation.properties.points) {
-        // Convert path/brush format to backend format
         coordinates = {
           points: annotation.properties.points.map((p: any) => [p.x, p.y])
         };
       } else if (annotation.type === 'text' && annotation.properties.position) {
-        // Convert text format to backend format
         coordinates = {
           x: annotation.properties.position.x,
           y: annotation.properties.position.y,
@@ -366,36 +388,40 @@ export default function Annotation() {
         shapeData
       });
 
-     console.log('Annotation saved to database:', savedAnnotation);
+      console.log('Annotation saved to database:', savedAnnotation);
 
-    // Update the local annotation with the database ID and server data
-    setAnnotations(prev => 
-      prev.map(ann => {
-        if (ann.id === annotation.id) {
-          return {
-            ...ann,
-            id: savedAnnotation._id,
-            labelId: savedAnnotation.labelId._id,
-            labelName: savedAnnotation.labelId.name,
-            createdBy: savedAnnotation.createdBy._id,
-            properties: {
-              ...ann.properties,
-              style: {
-                ...ann.properties.style,
-                color: savedAnnotation.labelId.colour // Ensure color from database
+      // Broadcast the new annotation ID to all users
+      addAnnotationId(savedAnnotation._id);
+
+      // Update local state
+      setAnnotations(prev => 
+        prev.map(ann => {
+          if (ann.id === annotation.id) {
+            return {
+              ...ann,
+              id: savedAnnotation._id,
+              labelId: savedAnnotation.labelId._id,
+              labelName: savedAnnotation.labelId.name,
+              createdBy: savedAnnotation.createdBy._id,
+              properties: {
+                ...ann.properties,
+                style: {
+                  ...ann.properties.style,
+                  color: savedAnnotation.labelId.colour
+                }
               }
-            }
-          };
-        }
-        return ann;
-      })
-    );
+            };
+          }
+          return ann;
+        })
+      );
       
     } catch (error) {
       console.error('Failed to save annotation:', error);
     }
   };
 
+  // Keep all your existing handler functions (handleAddImage, handleToolSelect, etc.)
   const handleCreateProject = async (projectData: ProjectData) => {
       try {
         if (!user) {
@@ -426,13 +452,12 @@ export default function Annotation() {
         setError(err instanceof Error ? err.message : 'Failed to create project');
       }
     };
-
+    
   const handleAddImage = async () => {
-    // Create file input element
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,application/zip,.zip';
-    input.multiple = true; // Allow multiple file selection
+    input.multiple = true;
     
     input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
@@ -443,7 +468,6 @@ export default function Annotation() {
       try {
         setIsUploadingImage(true);
 
-        // Separate zip files and image files
         const zipFiles: File[] = [];
         const imageFiles: File[] = [];
         
@@ -456,7 +480,6 @@ export default function Annotation() {
           }
         }
 
-        // Extract images from zip files
         for (const zipFile of zipFiles) {
           console.log('Extracting images from zip:', zipFile.name);
           const extractedImages = await s3UploadService.extractImagesFromZip(zipFile);
@@ -469,10 +492,8 @@ export default function Annotation() {
           return;
         }
 
-        // Validate all files
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
         for (const file of imageFiles) {
-          // Check if file type starts with 'image/' for more lenient validation
           if (!file.type.startsWith('image/') && !validTypes.includes(file.type)) {
             alert(`Invalid file type: ${file.name} (${file.type}). Please upload only image files.`);
             return;
@@ -481,7 +502,6 @@ export default function Annotation() {
 
         console.log(`Uploading ${imageFiles.length} images...`);
 
-        // Upload all images to S3
         const uploadResults = await s3UploadService.uploadMultipleImages(
           imageFiles,
           (fileIndex, fileName, progress) => {
@@ -499,12 +519,10 @@ export default function Annotation() {
 
         console.log('All images uploaded to S3 successfully');
 
-        // Get dimensions for all images
         const imagesData: ImageData[] = await Promise.all(
           imageFiles.map(async (file, index) => {
             const uploadResult = uploadResults.results[index];
             
-            // Get image dimensions
             const img = new Image();
             await new Promise((resolve, reject) => {
               img.onload = resolve;
@@ -523,25 +541,21 @@ export default function Annotation() {
 
         console.log('Adding all images to project...');
 
-        // Batch add all images to project via backend
         if (projectId) {
           const updatedProject = await projectService.batchAddImagesToProject(projectId, imagesData);
           
-          // Update local project state
           setProject(updatedProject);
 
-          // Create new active files for all added images
           const newImages = updatedProject.images.slice(-imagesData.length);
           const newActiveFiles: ActiveFile[] = newImages.map((image, index) => ({
             id: image._id,
             name: image.filename,
-            isActive: index === 0, // Only first image is active
+            isActive: index === 0,
             imageUrl: image.url,
             width: image.width,
             height: image.height
           }));
 
-          // Set all existing files to inactive, then add new files
           setActiveFiles(prev => [
             ...prev.map(file => ({ ...file, isActive: false })),
             ...newActiveFiles
@@ -572,7 +586,7 @@ export default function Annotation() {
     setCanvasZoom(prev => {
       if (direction === "in") return Math.min(prev + 25, 200);
       if (direction === "out") return Math.max(prev - 25, 25);
-      return 100; // reset
+      return 100;
     });
   };
 
@@ -593,7 +607,6 @@ export default function Annotation() {
     });
   };
 
-  // Handle mouse leave to hide cursor
   const handlePointerLeave = () => {
     updateMyPresence({ 
       cursor: null,
@@ -664,7 +677,6 @@ export default function Annotation() {
     },
   ];
 
-  // Dynamic layers - start with empty and allow users to create as needed
   const layers: Layer[] = [
     { id: "1", name: "Annotations", visible: true, locked: false },
   ];
@@ -672,7 +684,6 @@ export default function Annotation() {
   const closeFile = (fileId: string) => {
     setActiveFiles(prev => {
       const newFiles = prev.filter(file => file.id !== fileId);
-      // If we closed the active file, make the first remaining file active
       if (newFiles.length > 0 && !newFiles.some(f => f.isActive)) {
         newFiles[0].isActive = true;
       }
@@ -686,10 +697,8 @@ export default function Annotation() {
     );
   };
 
-  // Get current active file
   const activeFile = activeFiles.find(file => file.isActive);
 
-  // Loading state
   if (loading) {
     return (
       <div className="h-screen bg-white flex items-center justify-center">
@@ -701,7 +710,6 @@ export default function Annotation() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="h-screen bg-white flex items-center justify-center">
@@ -719,7 +727,6 @@ export default function Annotation() {
     );
   }
 
-  // No project found
   if (!project) {
     return (
       <div className="h-screen bg-white flex items-center justify-center">
@@ -754,11 +761,10 @@ export default function Annotation() {
         onSelectTool={(toolId) => setSelectedTool(toolId)}
         others={others}
         cursorColors={CURSOR_COLORS}
-        currentUser={user ? { username: user.username, email: user.email } : undefined} // ADD THIS
-        onSignOut={signout} // ADD THIS
+        currentUser={user ? { username: user.username, email: user.email } : undefined}
+        onSignOut={signout}
       />
 
-      {/* Label Selector */}
       <LabelSelector
         labels={labels}
         selectedLabelId={currentLabelId}
@@ -766,7 +772,6 @@ export default function Annotation() {
         onManageLabels={() => setShowManageLabelsModal(true)}
       />
 
-      {/* Main Content */}
       <div className="flex flex-1 relative" ref={containerRef}>
         <LeftToolbar
           tools={toolbarTools}
@@ -787,7 +792,7 @@ export default function Annotation() {
           setIsDrawing={setIsDrawing}
           selectedAnnotationId={selectedAnnotationId}
           setSelectedAnnotationId={setSelectedAnnotationId}
-          projectImage={activeFile} // Pass the active file/image data
+          projectImage={activeFile}
           onAnnotationCreated={saveAnnotationToDatabase}
           showGrid = {showGrid} 
         />
@@ -801,7 +806,7 @@ export default function Annotation() {
         {others.map(({ connectionId, presence }) => {
           if (!presence?.cursor) return null;
           
-          const anonymousName = getAnonymousName(connectionId, user?.username);
+          const username = presence.userInfo?.name || 'Anonymous User';
           const cursorColor = CURSOR_COLORS[connectionId % CURSOR_COLORS.length];
           
           return (
@@ -820,14 +825,13 @@ export default function Annotation() {
                   backgroundColor: cursorColor,
                 }}
               >
-                {anonymousName}
+                {username}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Modals */}
       <ShareProject
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
@@ -876,9 +880,8 @@ export default function Annotation() {
 }
 
 export function AnnotationCanvas() {
-  // Generate a unique room ID based on project ID or use a default
   const { id: projectId } = useParams();
-  const { user } = useAuth(); // ADD THIS
+  const { user } = useAuth();
   const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
 
   if (!user) {
@@ -898,6 +901,13 @@ export function AnnotationCanvas() {
         id={roomId}
         initialPresence={{ 
           cursor: null,
+          userInfo: {
+            name: user.username,
+            email: user.email
+          }
+        }}
+        initialStorage={{
+          annotationIds: new LiveList<string>([])
         }}
       >
         <Annotation />
