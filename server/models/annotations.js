@@ -49,10 +49,33 @@ const validatePointCoordinates = (coords) => {
   );
 };
 
+const validatePathCoordinates = (coords) => {
+  return (
+    coords &&
+    Array.isArray(coords.points) &&
+    coords.points.length >= 2 &&
+    coords.points.every((p) => 
+      Array.isArray(p) && 
+      p.length === 2 && 
+      typeof p[0] === 'number' && 
+      typeof p[1] === 'number'
+    )
+  );
+};
+
+const validateTextCoordinates = (coords) => {
+  return (
+    coords &&
+    typeof coords.x === 'number' &&
+    typeof coords.y === 'number' &&
+    (coords.text === undefined || typeof coords.text === 'string')
+  );
+};
+
 const shapeDataSchema = new Schema({
   type: {
     type: String,
-    enum: ['rectangle', 'polygon', 'line', 'point'],
+    enum: ['rectangle', 'polygon', 'line', 'point', 'path', 'brush', 'text'],
     required: true
   },
   coordinates: {
@@ -89,6 +112,52 @@ const shapeDataSchema = new Schema({
   }
 },
 { _id: false });
+
+shapeDataSchema.pre('validate', function(next) {
+  const coords = this.coordinates;
+  const type = this.type;
+  
+  console.log('Pre-validate: Checking coordinates for type:', type, coords);
+  
+  let isValid = false;
+  
+  switch(type) {
+    case 'rectangle':
+      isValid = validateRectangleCoordinates(coords);
+      break;
+    
+    case 'polygon':
+      isValid = validatePolygonCoordinates(coords);
+      break;
+    
+    case 'line':
+      isValid = validateLineCoordinates(coords);
+      break;
+    
+    case 'point':
+      isValid = validatePointCoordinates(coords);
+      break;
+
+    case 'path':
+    case 'brush':
+      isValid = validatePathCoordinates(coords);
+      break;
+    
+    case 'text':
+      isValid = validateTextCoordinates(coords);
+      break;
+    
+    default:
+      console.error('Unknown shape type in validation:', type);
+      isValid = false;
+  }
+  
+  if (!isValid) {
+    this.invalidate('coordinates', 'Invalid coordinates for the specified shape type');
+  }
+  
+  next();
+});
 
 const annotationSchema = new Schema({
   imageId: {

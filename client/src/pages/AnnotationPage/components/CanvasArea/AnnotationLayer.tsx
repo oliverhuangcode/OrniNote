@@ -55,7 +55,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       
       case "rectangle":
         if (!a.properties.position) return null;
-        const rectColor = a.properties.style?.color || "#13ba83";
+        const rectColor = a.properties.style?.color || a.properties.color || "#13ba83";
         const rectFill = lighten(rectColor, 0.3) + "55";
         return (
           <rect
@@ -75,7 +75,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       
       case "brush":
         if (!a.properties.points || a.properties.points.length === 0) return null;
-        const brushColor = a.properties.style?.color || "#13ba83";
+        const brushColor = a.properties.style?.color || a.properties.color || "#13ba83";
         const pathData = a.properties.points.reduce((path, point, index) => {
           return index === 0 ? `M ${point.x} ${point.y}` : `${path} L ${point.x} ${point.y}`;
         }, "");
@@ -93,7 +93,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       
       case "polygon":
         if (!a.properties.points) return null;
-        const polygonColor = a.properties.style?.color || "#13ba83";
+        const polygonColor = a.properties.style?.color || a.properties.color || "#13ba83";
         const polygonFill = lighten(polygonColor, 0.3) + "55";
         return (
           <polygon

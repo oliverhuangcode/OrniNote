@@ -192,12 +192,37 @@ export default function Annotation() {
       // Set first label as default if available and none is selected
       if (fetchedLabels.length > 0 && !currentLabelId) {
         setCurrentLabelId(fetchedLabels[0]._id);
+        setSelectedColor(fetchedLabels[0].colour); // Also update the color
         console.log('Auto-selected first label:', fetchedLabels[0].name);
       } else if (fetchedLabels.length === 0) {
         console.warn('No labels found. Create labels before annotating.');
       }
     } catch (err) {
       console.error('Failed to load labels:', err);
+    }
+  };
+
+  const handleLabelSelect = (labelId: string) => {
+    setCurrentLabelId(labelId);
+    console.log('Selected label:', labelId);
+    
+    // Update the selected color to match the label's color
+    const selectedLabel = labels.find(l => l._id === labelId);
+    if (selectedLabel) {
+      setSelectedColor(selectedLabel.colour);
+      console.log('Updated color to match label:', selectedLabel.colour);
+    }
+  };
+
+  const handleLabelsChanged = async () => {
+    await loadLabels();
+    
+    // If a label is currently selected, update the color to match
+    if (currentLabelId) {
+      const selectedLabel = labels.find(l => l._id === currentLabelId);
+      if (selectedLabel) {
+        setSelectedColor(selectedLabel.colour);
+      }
     }
   };
   
@@ -211,7 +236,8 @@ export default function Annotation() {
       const convertedAnnotations: AnnotationType[] = fetchedAnnotations.map(ann => {
         let properties: any = {
           style: {
-            color: ann.labelId.colour
+            color: ann.labelId.colour,
+            strokeWidth: 2
           }
         };
 
@@ -223,22 +249,19 @@ export default function Annotation() {
           };
           properties.width = ann.shapeData.coordinates.width;
           properties.height = ann.shapeData.coordinates.height;
-        } else if (ann.shapeData.type === 'polygon' || ann.shapeData.type === 'line') {
+        } else if (ann.shapeData.type === 'polygon' || ann.shapeData.type === 'line' || ann.shapeData.type === 'path' || ann.shapeData.type === 'brush') {
           properties.points = ann.shapeData.coordinates.points.map((p: number[]) => ({
             x: p[0],
             y: p[1]
           }));
-        } else if (ann.shapeData.type === 'point') {
+        } else if (ann.shapeData.type === 'point' || ann.shapeData.type === 'text') {
           properties.position = {
             x: ann.shapeData.coordinates.x,
             y: ann.shapeData.coordinates.y
           };
-        } else if (ann.shapeData.type === 'circle') {
-          properties.position = {
-            x: ann.shapeData.coordinates.x,
-            y: ann.shapeData.coordinates.y
-          };
-          properties.radius = ann.shapeData.coordinates.radius;
+          if (ann.shapeData.type === 'text' && ann.shapeData.coordinates.text) {
+            properties.text = ann.shapeData.coordinates.text;
+          }
         }
 
         return {
@@ -266,15 +289,6 @@ export default function Annotation() {
     }
   }, [currentImageId]);
 
-  // Show helpful message when no labels exist
-  useEffect(() => {
-    if (!loading && labels.length === 0 && annotations.length === 0 && project) {
-      setTimeout(() => {
-        alert('Welcome! Please create labels first using the "Manage Labels" button before annotating.');
-      }, 500);
-    }
-  }, [loading, labels.length, annotations.length, project]);
-
   // Save annotation to database
   const saveAnnotationToDatabase = async (annotation: AnnotationType) => {
     try {
@@ -294,7 +308,7 @@ export default function Annotation() {
 
       // Map your frontend annotation format to backend format
       let coordinates: any;
-      
+
       if (annotation.type === 'rectangle' && annotation.properties.position) {
         // Convert frontend rectangle format to backend format
         coordinates = {
@@ -313,6 +327,18 @@ export default function Annotation() {
         coordinates = {
           points: annotation.properties.points.map((p: any) => [p.x, p.y])
         };
+      } else if ((annotation.type === 'path' || annotation.type === 'brush') && annotation.properties.points) {
+        // Convert path/brush format to backend format
+        coordinates = {
+          points: annotation.properties.points.map((p: any) => [p.x, p.y])
+        };
+      } else if (annotation.type === 'text' && annotation.properties.position) {
+        // Convert text format to backend format
+        coordinates = {
+          x: annotation.properties.position.x,
+          y: annotation.properties.position.y,
+          text: annotation.properties.text || ''
+        };
       } else {
         console.warn('Unknown annotation type or missing properties:', annotation);
         return;
@@ -321,7 +347,7 @@ export default function Annotation() {
       const shapeData = {
         type: annotation.type,
         coordinates: coordinates,
-        isNormalized: false
+        isNormalised: false
       };
 
       const savedAnnotation = await annotationService.createAnnotation({
@@ -331,23 +357,30 @@ export default function Annotation() {
         shapeData
       });
 
-      console.log('Annotation saved to database:', savedAnnotation);
-      
-      // Update the local annotation with the database ID and server data
-      setAnnotations(prev => 
-        prev.map(ann => {
-          if (ann.id === annotation.id) {
-            return {
-              ...ann,
-              id: savedAnnotation._id,
-              labelId: savedAnnotation.labelId._id,
-              labelName: savedAnnotation.labelId.name,
-              createdBy: savedAnnotation.createdBy._id
-            };
-          }
-          return ann;
-        })
-      );
+     console.log('Annotation saved to database:', savedAnnotation);
+
+    // Update the local annotation with the database ID and server data
+    setAnnotations(prev => 
+      prev.map(ann => {
+        if (ann.id === annotation.id) {
+          return {
+            ...ann,
+            id: savedAnnotation._id,
+            labelId: savedAnnotation.labelId._id,
+            labelName: savedAnnotation.labelId.name,
+            createdBy: savedAnnotation.createdBy._id,
+            properties: {
+              ...ann.properties,
+              style: {
+                ...ann.properties.style,
+                color: savedAnnotation.labelId.colour // Ensure color from database
+              }
+            }
+          };
+        }
+        return ann;
+      })
+    );
       
     } catch (error) {
       console.error('Failed to save annotation:', error);
@@ -678,7 +711,7 @@ export default function Annotation() {
       <LabelSelector
         labels={labels}
         selectedLabelId={currentLabelId}
-        onSelectLabel={setCurrentLabelId}
+        onSelectLabel={handleLabelSelect}
         onManageLabels={() => setShowManageLabelsModal(true)}
       />
 
@@ -762,7 +795,7 @@ export default function Annotation() {
         isOpen={showManageLabelsModal}
         onClose={() => setShowManageLabelsModal(false)}
         projectId={project._id}
-        onLabelsChanged={loadLabels}
+        onLabelsChanged={handleLabelsChanged}
       />
       {/* Upload Loading Indicator */}
       {isUploadingImage && (
