@@ -89,7 +89,6 @@ const shapeDataSchema = new Schema({
 },
 { _id: false });
 
-// Add schema-level validation instead of field-level
 shapeDataSchema.pre('validate', function(next) {
   const coords = this.coordinates;
   const type = this.type;

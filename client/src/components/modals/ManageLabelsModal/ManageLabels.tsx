@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import { labelService, Label } from '../../../services/labelService';
 
@@ -9,20 +9,18 @@ interface ManageLabelsProps {
   onLabelsChanged: () => void; // Callback to refresh labels in parent
 }
 
-const PRESET_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-  '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80'
-];
 
 export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChanged }: ManageLabelsProps) {
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
-  const [newLabelColor, setNewLabelColor] = useState(PRESET_COLORS[0]);
+  const [newLabelColor, setNewLabelColor] = useState('#FF6B6B');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const newColorInputRef = useRef<HTMLInputElement>(null);
+  const editColorInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,7 +55,7 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
         colour: newLabelColor
       });
       setNewLabelName('');
-      setNewLabelColor(PRESET_COLORS[0]);
+      setNewLabelColor('#FF6B6B');
       await loadLabels();
       onLabelsChanged();
     } catch (err) {
@@ -140,19 +138,22 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateLabel()}
               />
-              <div className="flex gap-2">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setNewLabelColor(color)}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      newLabelColor === color ? 'border-gray-900' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
-              </div>
+              <div className="relative">
+              <button
+                type="button"
+                onClick={() => newColorInputRef.current?.click()}
+                className="w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors flex-shrink-0"
+                style={{ backgroundColor: newLabelColor }}
+                title="Pick color"
+              />
+              <input
+                ref={newColorInputRef}
+                type="color"
+                value={newLabelColor}
+                onChange={(e) => setNewLabelColor(e.target.value)}
+                className="absolute top-full left-1/2 -translate-x-1/2 -mt-8 w-10 h-10 opacity-0 cursor-pointer"
+              />
+            </div>
               <button
                 onClick={handleCreateLabel}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
@@ -189,17 +190,21 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
                           onChange={(e) => setEditName(e.target.value)}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                        <div className="flex gap-1">
-                          {PRESET_COLORS.map((color) => (
-                            <button
-                              key={color}
-                              onClick={() => setEditColor(color)}
-                              className={`w-6 h-6 rounded-full border ${
-                                editColor === color ? 'border-gray-900 border-2' : 'border-gray-300'
-                              }`}
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => editColorInputRef.current?.click()}
+                            className="w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors flex-shrink-0"
+                            style={{ backgroundColor: editColor }}
+                            title="Pick color"
+                          />
+                          <input
+                            ref={editColorInputRef}
+                            type="color"
+                            value={editColor}
+                            onChange={(e) => setEditColor(e.target.value)}
+                            className="absolute top-full left-1/2 -translate-x-1/2 -mt-8 w-10 h-10 opacity-0 cursor-pointer"
+                          />
                         </div>
                         <button
                           onClick={handleSaveEdit}
