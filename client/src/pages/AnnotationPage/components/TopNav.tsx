@@ -1,6 +1,7 @@
 import type { User } from "@liveblocks/client";
 import { Link, useNavigate } from "react-router-dom";
 import { ActiveFile } from "../types";
+import { getAnonymousName, getInitials } from "../../../utils/mockData";
 
 interface TopNavProps {
   projectName?: string;
@@ -56,9 +57,18 @@ export default function TopNav({
 }: TopNavProps) {
   const navigate = useNavigate();
 
-  // Get user initial for avatar
-  const getUserInitial = () => {
-    return currentUser?.username.charAt(0).toUpperCase() || 'U';
+  const getUserInitials = () => {
+    if (!currentUser?.username) return 'U';
+    
+    const name = currentUser.username.trim();
+    const parts = name.split(' ');
+    
+    if (parts.length >= 2) {
+      // Get first letter of first two words (e.g., "John Doe" → "JD")
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    // Get first two letters of single word (e.g., "John" → "JO")
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -147,8 +157,8 @@ export default function TopNav({
               onClick={onToggleUserDropdown}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {getUserInitial()}
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                {getUserInitials()}
               </div>
               <span className="text-sm font-medium">{currentUser?.username || 'User'}</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,13 +205,21 @@ export default function TopNav({
           {others.length > 0 && (
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
-                {others.slice(0, 3).map(({ connectionId }) => (
-                  <div
-                    key={connectionId}
-                    className="w-8 h-8 rounded-full border-2 border-white"
-                    style={{ backgroundColor: cursorColors[connectionId % cursorColors.length] }}
-                  />
-                ))}
+                {others.slice(0, 3).map(({ connectionId, presence }) => {
+                  const username = presence?.userInfo?.name || 'User';
+                  const initials = getInitials(username);
+                  
+                  return (
+                    <div
+                      key={connectionId}
+                      className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white font-semibold text-xs"
+                      style={{ backgroundColor: cursorColors[connectionId % cursorColors.length] }}
+                      title={username}
+                    >
+                      {initials}
+                    </div>
+                  );
+                })}
                 {others.length > 3 && (
                   <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-500 flex items-center justify-center text-xs text-white font-medium">
                     +{others.length - 3}
