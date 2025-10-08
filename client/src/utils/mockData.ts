@@ -138,6 +138,18 @@ export const getLabelsByProject = (projectId: number): Label[] => {
   return MOCK_LABELS.filter(label => label.projectId === projectId);
 };
 
+export const getInitials = (name: string): string => {
+  if (!name) return '?';
+  
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    // Get first letter of first two words
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  // Get first two letters of single word
+  return name.substring(0, 2).toUpperCase();
+};
+
 // Current user (for testing)
 export const CURRENT_USER: User = MOCK_USERS[0];
 

@@ -78,10 +78,20 @@ export default function Dashboard() {
     );
   }
 
-  const getUserInitial = () => {
-      return user.username.charAt(0).toUpperCase();
-    };
-  
+  const getUserInitials = () => {
+    if (!user?.username) return 'U';
+    
+    const name = user.username.trim();
+    const parts = name.split(' ');
+    
+    if (parts.length >= 2) {
+      // Get first letter of first two words
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    // Get first two letters of single word
+    return name.substring(0, 2).toUpperCase();
+  };
+
   const loadProjects = async () => {
     if (!user) return;
 
@@ -422,18 +432,19 @@ const handleCreateProject = async (projectData: ProjectData) => {
               </h3>
             </Link>
             {project.collaborators && project.collaborators.length > 0 && (
-              <div className="flex -space-x-1">
-                {project.collaborators.map((collaborator, index) => (
-                  <div
-                    key={index}
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white border-2 border-white"
-                    style={{ backgroundColor: collaborator.color }}
-                  >
-                    {collaborator.initial}
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex -space-x-1">
+              {project.collaborators.map((collaborator, index) => (
+                <div
+                  key={index}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white"
+                  style={{ backgroundColor: collaborator.color }}
+                  title={collaborator.initial} // Shows full name on hover
+                >
+                  {collaborator.initial.substring(0, 2).toUpperCase()}
+                </div>
+              ))}
+            </div>
+          )}
           </div>
           <p className="text-gray-500 text-sm">
             {project.isShared && project.sharedBy ? `Shared by ${project.sharedBy}` : project.lastEdited}
@@ -458,7 +469,7 @@ const handleCreateProject = async (projectData: ProjectData) => {
               className="flex items-center gap-3 w-full hover:bg-gray-50 p-2 rounded-lg transition-colors"
             >
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                {getUserInitial()}
+                {getUserInitials()}
               </div>
               <div className="text-left flex-1">
                 <p className="font-inter font-medium text-black">{user.username}</p>
