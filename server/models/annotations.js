@@ -8,8 +8,8 @@ const validateRectangleCoordinates = (coords) => {
     typeof coords.y === 'number' &&
     typeof coords.width === 'number' &&
     typeof coords.height === 'number' &&
-    coords.width >= 0 &&
-    coords.height >= 0
+    coords.width > 0 &&
+    coords.height > 0
   );
 };
 
@@ -81,6 +81,7 @@ const shapeDataSchema = new Schema({
   coordinates: {
     type: Schema.Types.Mixed,
     required: true
+    // Remove the validate block - we'll handle it in pre('validate')
   },
   isNormalised: {
     type: Boolean,
@@ -129,7 +130,8 @@ shapeDataSchema.pre('validate', function(next) {
   }
   
   if (!isValid) {
-    this.invalidate('coordinates', 'Invalid coordinates for the specified shape type');
+    console.error('Validation failed for type:', type, 'coords:', coords);
+    this.invalidate('coordinates', `Invalid coordinates for shape type: ${type}`);
   }
   
   next();

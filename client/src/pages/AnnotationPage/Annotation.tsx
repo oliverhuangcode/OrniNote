@@ -18,6 +18,8 @@ import { annotationService } from '../../services/annotationService';
 import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels";
 import LabelSelector from "./components/LabelSelector";
 import { labelService, Label } from '../../services/labelService';  
+import { getAnonymousName } from "../../utils/mockData";
+import { useAuth } from "../../contexts/authContext";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -27,8 +29,6 @@ type CursorPosition = {
 
 type Presence = {
   cursor: CursorPosition | null;
-  selectedTool?: string;
-  selectedColor?: string;
 };
 
 // Declare module to extend Liveblocks types
@@ -84,6 +84,7 @@ interface ProjectData {
 
 export default function Annotation() {
   const { id: projectId } = useParams();
+  const { user, signout } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
@@ -115,7 +116,7 @@ export default function Annotation() {
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
 
-  const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3";
+  // const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3";
 
   // State for current image and label
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
@@ -299,6 +300,12 @@ export default function Annotation() {
         return;
       }
 
+      if (!user) {
+        console.error('Cannot save: No user logged in');
+        alert('You must be logged in to create annotations');
+        return;
+      }
+
       // Map your frontend annotation format to backend format
       let coordinates: any;
 
@@ -346,7 +353,7 @@ export default function Annotation() {
       const savedAnnotation = await annotationService.createAnnotation({
         imageId: currentImageId,
         labelId: currentLabelId,
-        createdBy: CURRENT_USER_ID,
+        createdBy: user._id,
         shapeData
       });
 
@@ -501,7 +508,6 @@ export default function Annotation() {
           ]);
 
           console.log(`Successfully added ${imagesData.length} images!`);
-          // REMOVED: alert(`Successfully uploaded ${imagesData.length} image(s)`);
         }
       } catch (err) {
         console.error('Error uploading images:', err);
@@ -516,22 +522,10 @@ export default function Annotation() {
 
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
-    // Update presence to share selected tool with others
-    updateMyPresence({ 
-      cursor,
-      selectedTool: toolId,
-      selectedColor 
-    });
   };
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
-    // Update presence to share selected color with others
-    updateMyPresence({ 
-      cursor,
-      selectedTool,
-      selectedColor: color 
-    });
   };
 
   const handleCanvasZoom = (direction: "in" | "out" | "reset") => {
@@ -552,18 +546,13 @@ export default function Annotation() {
         x: Math.round(event.clientX - rect.left),
         y: Math.round(event.clientY - rect.top),
       },
-      selectedTool,
-      selectedColor,
     });
   };
-
 
   // Handle mouse leave to hide cursor
   const handlePointerLeave = () => {
     updateMyPresence({ 
       cursor: null,
-      selectedTool,
-      selectedColor 
     });
   };
 
@@ -714,6 +703,8 @@ export default function Annotation() {
         onAddImage={handleAddImage}
         others={others}
         cursorColors={CURSOR_COLORS}
+        currentUser={user ? { username: user.username, email: user.email } : undefined} // ADD THIS
+        onSignOut={signout} // ADD THIS
       />
 
       {/* Label Selector */}
@@ -758,31 +749,27 @@ export default function Annotation() {
         {others.map(({ connectionId, presence }) => {
           if (!presence?.cursor) return null;
           
+          const anonymousName = getAnonymousName(connectionId, user?.username);
+          const cursorColor = CURSOR_COLORS[connectionId % CURSOR_COLORS.length];
+          
           return (
             <div key={`cursor-${connectionId}`} className="absolute pointer-events-none z-50">
               <Cursor
-                color={CURSOR_COLORS[connectionId % CURSOR_COLORS.length]}
+                color={cursorColor}
                 x={presence.cursor.x}
                 y={presence.cursor.y}
               />
-              {/* Show other users' selected tools */}
-              {presence.selectedTool && (
-                <div 
-                  className="absolute bg-black/80 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap"
-                  style={{
-                    left: presence.cursor.x + 20,
-                    top: presence.cursor.y - 30
-                  }}
-                >
-                  Tool: {presence.selectedTool}
-                  {presence.selectedColor && (
-                    <span 
-                      className="inline-block w-3 h-3 rounded-sm ml-2 border border-white/30"
-                      style={{ backgroundColor: presence.selectedColor }}
-                    />
-                  )}
-                </div>
-              )}
+              {/* Figma-style name label */}
+              <div 
+                className="absolute text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium"
+                style={{
+                  left: presence.cursor.x,
+                  top: presence.cursor.y + 20,
+                  backgroundColor: cursorColor,
+                }}
+              >
+                {anonymousName}
+              </div>
             </div>
           );
         })}
@@ -828,7 +815,19 @@ export default function Annotation() {
 export function AnnotationCanvas() {
   // Generate a unique room ID based on project ID or use a default
   const { id: projectId } = useParams();
+  const { user } = useAuth(); // ADD THIS
   const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
+
+  if (!user) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-highlight mx-auto mb-4"></div>
+          <div className="text-xl font-semibold text-gray-900">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LiveblocksProvider publicApiKey="pk_dev_eH0jmBFlrKAt3C8vX8ZZF53cmXb5W6XoCyGx2A9NGCZV3-v2P-gqUav-vAvszF1x">
@@ -836,8 +835,6 @@ export function AnnotationCanvas() {
         id={roomId}
         initialPresence={{ 
           cursor: null,
-          selectedTool: "move",
-          selectedColor: "#3B3B3B"
         }}
       >
         <Annotation />
