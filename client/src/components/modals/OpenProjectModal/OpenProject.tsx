@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { projectService } from "../../../services/projectService";
-import { Project as BackendProject } from "../../../services/projectService";
 import { Link } from "react-router-dom";
 
 interface Project {

@@ -31,6 +31,7 @@ interface CanvasAreaProps {
   selectedColor: string;
   projectImage?: ActiveFile; // New prop for project image
   onAnnotationCreated?: (annotation: Annotation) => void; 
+  showGrid: boolean;
 }
 
 export default function CanvasArea({ 
@@ -47,7 +48,8 @@ export default function CanvasArea({
   setSelectedAnnotationId, 
   selectedColor, 
   projectImage,
-  onAnnotationCreated  
+  onAnnotationCreated,
+  showGrid
 }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
@@ -471,6 +473,7 @@ export default function CanvasArea({
           }}>
             <div className="relative w-full h-full bg-gray-100">
               <div ref={zoomLayerRef} className="absolute inset-0" style={zoomStyle}>
+                {/* Annotation + Image layer */}
                 <AnnotationLayer
                   annotations={annotations}
                   onClick={handleCanvasClick}
@@ -496,6 +499,20 @@ export default function CanvasArea({
               </div>
               {/* Text tool overlay (rendered outside SVG) */}
               {selectedTool === "text" ? textTool.overlay : null}
+
+              {/* Grid overlay */}
+              {showGrid && (
+                <div
+                  className="absolute inset-0 pointer-events-none z-5"
+                  style={{
+                    backgroundImage: `
+                      linear-gradient(to right, rgba(0,0,0,0.2) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(0,0,0,0.2) 1px, transparent 1px)
+                    `,
+                    backgroundSize: "50px 50px",
+                  }}
+                />
+              )}
             </div>
 
             {/* Zoom controls */}

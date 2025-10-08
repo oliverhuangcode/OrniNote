@@ -13,6 +13,8 @@ interface TopNavProps {
   onShowCreateModal: () => void;
   onShowOpenModal: () => void;
   onCanvasZoom: (direction: "in" | "out" | "reset") => void;
+  onShowGrid: () => void;
+  showGrid: boolean;
   onAddImage: () => void;
   others: readonly User<any, any>[];
   cursorColors: string[];
@@ -33,6 +35,8 @@ export default function TopNav({
   onShowCreateModal,
   onShowOpenModal,
   onCanvasZoom,
+  onShowGrid,
+  showGrid,
   onAddImage,
   others,
   cursorColors,
@@ -141,15 +145,9 @@ export default function TopNav({
                 <div className="border-t border-gray-100 my-1" />
                 <MenuItem as="button"
                   className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
-                  onClick={() => console.log("Show Grid")}
+                  onClick={onShowGrid}
                 >
-                  Show Grid
-                </MenuItem>
-                <MenuItem as="button"
-                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
-                  onClick={() => console.log("Show Rulers")}
-                >
-                  Show Rulers
+                  {showGrid? "Hide Grid" : "Show Grid"} 
                 </MenuItem>
               </MenuItems>
             </Menu>
