@@ -205,16 +205,16 @@ export default function TopNav({
           {others.length > 0 && (
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
-                {others.slice(0, 3).map(({ connectionId }) => {
-                  const anonymousName = getAnonymousName(connectionId, currentUser?.username);
-                  const initials = getInitials(anonymousName);
+                {others.slice(0, 3).map(({ connectionId, presence }) => {
+                  const username = presence?.userInfo?.name || 'User';
+                  const initials = getInitials(username);
                   
                   return (
                     <div
                       key={connectionId}
                       className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white font-semibold text-xs"
                       style={{ backgroundColor: cursorColors[connectionId % cursorColors.length] }}
-                      title={anonymousName}
+                      title={username}
                     >
                       {initials}
                     </div>
