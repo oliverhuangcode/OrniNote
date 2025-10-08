@@ -605,51 +605,62 @@ export default function Annotation() {
       id: "move",
       isSelected: selectedTool === "move",
       icon: <Move className={selectedTool === "move" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Move"
     },
     {
       id: "search",
       isSelected: selectedTool === "search",
       icon: <Search className={selectedTool === "search" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Search"
     },
     {
       id: "marquee",
       isSelected: selectedTool === "marquee",
       icon: <Maximize className={selectedTool === "marquee" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Marquee"
     },
     {
       id: "rectangle",
       isSelected: selectedTool === "rectangle",
       icon: <Square className={selectedTool === "rectangle" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Rectangle"
     },
     {
       id: "line",
       isSelected: selectedTool === "line",
       icon: <Minus className={selectedTool === "line" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Line"
     },
     {
       id: "brush",
       isSelected: selectedTool === "brush",
       icon: <Brush className={selectedTool === "brush" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Brush"
+      
     },
     {
       id: "edit",
       isSelected: selectedTool === "edit",
       icon: <Wand2 className={selectedTool === "edit" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Edit"
     },
     {
       id: "text",
       isSelected: selectedTool === "text",
       icon: <Type className={selectedTool === "text" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Textbox"
     },
     {
       id: "eyedropper",
       isSelected: selectedTool === "eyedropper",
       icon: <Pipette className={selectedTool === "eyedropper" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Eyedropper"
     },
     {
       id: "pen",
       isSelected: selectedTool === "pen",
       icon: <Pen className={selectedTool === "pen" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Pen"
     },
   ];
 
@@ -739,6 +750,8 @@ export default function Annotation() {
         onShowGrid={handleGrid}
         showGrid={showGrid}
         onAddImage={handleAddImage}
+        tools={toolbarTools}
+        onSelectTool={(toolId) => setSelectedTool(toolId)}
         others={others}
         cursorColors={CURSOR_COLORS}
         currentUser={user ? { username: user.username, email: user.email } : undefined} // ADD THIS

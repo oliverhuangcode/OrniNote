@@ -1,6 +1,8 @@
 import type { User } from "@liveblocks/client";
 import { Link, useNavigate } from "react-router-dom";
 import { ActiveFile } from "../types";
+import { ToolbarTool } from "../types";
+import { ToolsMenu } from "./ToolsMenu";
 import { Menu, MenuItem, MenuItems, MenuButton } from "@headlessui/react";
 
 interface TopNavProps {
@@ -15,6 +17,8 @@ interface TopNavProps {
   onCanvasZoom: (direction: "in" | "out" | "reset") => void;
   onShowGrid: () => void;
   showGrid: boolean;
+  tools: ToolbarTool[];
+  onSelectTool: (toolId: string) => void;
   onAddImage: () => void;
   others: readonly User<any, any>[];
   cursorColors: string[];
@@ -37,6 +41,8 @@ export default function TopNav({
   onCanvasZoom,
   onShowGrid,
   showGrid,
+  tools,
+  onSelectTool,
   onAddImage,
   others,
   cursorColors,
@@ -151,9 +157,13 @@ export default function TopNav({
                 </MenuItem>
               </MenuItems>
             </Menu>
+
+            {/* Tools Menu */}
+            <Menu as="div" className="relative inline-block text-left">
+                <ToolsMenu tools={tools} onSelectTool={onSelectTool} />
+            </Menu>
             
             {/* Static buttons */}
-            <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Tools menu")}>Tools</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={onShowShareModal}>Share</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Help menu")}>Help</button>
           </div>
