@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
 import { projectService, Project as BackendProject } from "../../services/projectService";
+import { useAuth } from "../../contexts/authContext";
 
 interface Project {
   id: string;
@@ -33,6 +34,7 @@ type ViewType = "home" | "shared" | "deleted";
 type SortType = "Recent" | "Name" | "Date Modified";
 
 export default function Dashboard() {
+  const { user, signout } = useAuth();
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,7 +48,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3"; 
+  // const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3"; 
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -59,33 +61,59 @@ export default function Dashboard() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Load projects from backend
   useEffect(() => {
-    loadProjects();
-  }, []);
+    if (user) {
+      loadProjects();
+    }
+  }, [user, currentView]); // ADD currentView here
 
-  useEffect(() => {
-    loadProjects();
-  }, [currentView]);
+  if (!user) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-highlight mx-auto mb-4"></div>
+          <div className="text-xl font-semibold text-gray-900">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
+  const getUserInitial = () => {
+      return user.username.charAt(0).toUpperCase();
+    };
+  
   const loadProjects = async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
       setError(null);
       
       let backendProjects;
       
-      // Load different projects based on current view
       if (currentView === 'deleted') {
-        backendProjects = await projectService.getDeletedProjects(CURRENT_USER_ID);
+        backendProjects = await projectService.getDeletedProjects(user._id);
+      } else if (currentView === 'shared') {
+        backendProjects = await projectService.getSharedProjects(user._id);
       } else {
-        backendProjects = await projectService.getUserProjects(CURRENT_USER_ID);
+        backendProjects = await projectService.getUserProjects(user._id);
+        // Filter to only owned projects
+        backendProjects = backendProjects.filter(p => p.owner._id === user._id);
       }
       
-      // Convert backend projects to dashboard card format
-      const formattedProjects = backendProjects.map(project => 
-        projectService.convertToCardFormat(project)
-      );
+      const formattedProjects = backendProjects.map(project => {
+        const formatted = projectService.convertToCardFormat(project);
+        
+        if (currentView === 'shared') {
+          return {
+            ...formatted,
+            isShared: true,
+            sharedBy: project.owner.username
+          };
+        }
+        
+        return formatted;
+      });
       
       setProjects(formattedProjects);
     } catch (err) {
@@ -96,7 +124,13 @@ export default function Dashboard() {
     }
   };
 
+
 const handleCreateProject = async (projectData: ProjectData) => {
+  if (!user) {
+  alert('You must be logged in to create a project');
+  return;
+  }
+
   try {
     if (!projectData.imageUrl) {
       throw new Error('Image URL is required');
@@ -110,7 +144,7 @@ const handleCreateProject = async (projectData: ProjectData) => {
       imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
       imageWidth: projectData.width,
       imageHeight: projectData.height,
-      ownerId: CURRENT_USER_ID
+      ownerId: user._id
     };
 
       // Create project in backend (MongoDB) with the first image
@@ -424,11 +458,11 @@ const handleCreateProject = async (projectData: ProjectData) => {
               className="flex items-center gap-3 w-full hover:bg-gray-50 p-2 rounded-lg transition-colors"
             >
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                U
+                {getUserInitial()}
               </div>
               <div className="text-left flex-1">
-                <p className="font-inter font-medium text-black">User</p>
-                <p className="font-inter text-sm text-gray-500">user@example.com</p>
+                <p className="font-inter font-medium text-black">{user.username}</p>
+                <p className="font-inter text-sm text-gray-500">{user.email}</p>
               </div>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-gray-400">
                 <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -448,6 +482,7 @@ const handleCreateProject = async (projectData: ProjectData) => {
                   <button
                     className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-inter"
                     onClick={() => {
+                      signout(); // Use the signout from useAuth
                       setShowUserDropdown(false);
                       navigate("/login");
                     }}

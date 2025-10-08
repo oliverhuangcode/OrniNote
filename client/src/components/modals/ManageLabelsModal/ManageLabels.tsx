@@ -14,7 +14,7 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
-  const [newLabelColor, setNewLabelColor] = useState('#FF6B6B');
+  const [newLabelColor, setNewLabelColor] = useState('#456BA1');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
@@ -41,7 +41,7 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
     }
   };
 
-  const handleCreateLabel = async () => {
+    const handleCreateLabel = async () => {
     if (!newLabelName.trim()) {
       setError('Label name is required');
       return;
@@ -55,7 +55,7 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
         colour: newLabelColor
       });
       setNewLabelName('');
-      setNewLabelColor('#FF6B6B');
+      setNewLabelColor('#456BA1'); 
       await loadLabels();
       onLabelsChanged();
     } catch (err) {
@@ -139,21 +139,21 @@ export default function ManageLabels({ isOpen, onClose, projectId, onLabelsChang
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateLabel()}
               />
               <div className="relative">
-              <button
-                type="button"
-                onClick={() => newColorInputRef.current?.click()}
-                className="w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors flex-shrink-0"
-                style={{ backgroundColor: newLabelColor }}
-                title="Pick color"
-              />
-              <input
-                ref={newColorInputRef}
-                type="color"
-                value={newLabelColor}
-                onChange={(e) => setNewLabelColor(e.target.value)}
-                className="absolute top-full left-1/2 -translate-x-1/2 -mt-8 w-10 h-10 opacity-0 cursor-pointer"
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={() => newColorInputRef.current?.click()}
+                  className="w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors flex-shrink-0"
+                  style={{ backgroundColor: newLabelColor }}
+                  title="Pick color"
+                />
+                <input
+                  ref={newColorInputRef}
+                  type="color"
+                  value={newLabelColor}
+                  onChange={(e) => setNewLabelColor(e.target.value)}
+                  className="absolute top-full left-1/2 -translate-x-1/2 -mt-8 w-10 h-10 opacity-0 cursor-pointer"
+                />
+              </div>
               <button
                 onClick={handleCreateLabel}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"

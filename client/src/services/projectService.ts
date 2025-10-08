@@ -1,3 +1,5 @@
+import { getAuthHeaders, handleAuthError } from '../utils/apiHelper';
+
 export interface ProjectData {
   name: string;
   description?: string;
@@ -57,17 +59,15 @@ class ProjectService {
   }
 
   /**
- * Create a new project with image upload
- */
-async createProject(projectData: ProjectData): Promise<Project> {
+   * Create a new project with image upload
+   */
+  async createProject(projectData: ProjectData): Promise<Project> {
     try {
       console.log('ProjectService: Creating project with data:', projectData);
       
       const response = await fetch(`${this.apiBaseUrl}/projects`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
         body: JSON.stringify(projectData),
       });
 
@@ -76,6 +76,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Create project error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -88,7 +89,6 @@ async createProject(projectData: ProjectData): Promise<Project> {
     }
   }
 
-
   /**
    * Get all projects for a user
    */
@@ -98,9 +98,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/user/${userId}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       console.log('Get user projects response status:', response.status);
@@ -108,6 +106,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Get user projects error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -129,9 +128,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/user/${userId}?includeDeleted=true`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       console.log('Get deleted projects response status:', response.status);
@@ -139,6 +136,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Get deleted projects error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -160,9 +158,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       console.log('Get project response status:', response.status);
@@ -170,6 +166,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Get project error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -183,6 +180,36 @@ async createProject(projectData: ProjectData): Promise<Project> {
   }
 
   /**
+ * Get projects shared with a user (where user is collaborator but not owner)
+ */
+  async getSharedProjects(userId: string): Promise<Project[]> {
+    try {
+      console.log('ProjectService: Fetching shared projects for user:', userId);
+      
+      const response = await fetch(`${this.apiBaseUrl}/projects/user/${userId}/shared`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      console.log('Get shared projects response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Get shared projects error response:', errorData);
+        if (response.status === 401) handleAuthError(response);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: GetProjectsResponse = await response.json();
+      console.log(`Found ${data.projects.length} shared projects for user ${userId}`);
+      return data.projects;
+    } catch (error) {
+      console.error('Error fetching shared projects:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update project details
    */
   async updateProject(projectId: string, updates: { name?: string; description?: string }): Promise<Project> {
@@ -191,9 +218,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
         body: JSON.stringify(updates),
       });
 
@@ -202,6 +227,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Update project error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -223,9 +249,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       console.log('Delete response status:', response.status);
@@ -233,6 +257,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Delete response error:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -253,9 +278,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/restore`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       console.log('Restore response status:', response.status);
@@ -263,6 +286,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Restore response error:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -282,9 +306,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/permanent`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
       });
 
       console.log('Permanent delete response status:', response.status);
@@ -292,6 +314,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Permanent delete response error:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -319,9 +342,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/images`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
         body: JSON.stringify(imageData),
       });
 
@@ -330,6 +351,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Add image error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -359,9 +381,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       
       const response = await fetch(`${this.apiBaseUrl}/projects/${projectId}/images/batch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(), // UPDATED
         body: JSON.stringify({ images: imagesData }),
       });
 
@@ -370,6 +390,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Batch add images error response:', errorData);
+        if (response.status === 401) handleAuthError(response); // ADDED
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -381,6 +402,7 @@ async createProject(projectData: ProjectData): Promise<Project> {
       throw error;
     }
   }
+
 
   /**
    * Convert backend project format to dashboard card format

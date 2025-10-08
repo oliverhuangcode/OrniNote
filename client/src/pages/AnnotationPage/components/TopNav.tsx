@@ -23,6 +23,11 @@ interface TopNavProps {
   onAddImage: () => void;
   others: readonly User<any, any>[];
   cursorColors: string[];
+  currentUser?: { // ADD THIS
+    username: string;
+    email: string;
+  };
+  onSignOut: () => void; // ADD THIS
 }
 
 export default function TopNav({
@@ -45,9 +50,16 @@ export default function TopNav({
   onCanvasZoom,
   onAddImage,
   others,
-  cursorColors
+  cursorColors,
+  currentUser, // ADD THIS
+  onSignOut // ADD THIS
 }: TopNavProps) {
   const navigate = useNavigate();
+
+  // Get user initial for avatar
+  const getUserInitial = () => {
+    return currentUser?.username.charAt(0).toUpperCase() || 'U';
+  };
 
   return (
     <>
@@ -136,9 +148,9 @@ export default function TopNav({
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
             >
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                U
+                {getUserInitial()}
               </div>
-              <span className="text-sm font-medium">User</span>
+              <span className="text-sm font-medium">{currentUser?.username || 'User'}</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -146,12 +158,19 @@ export default function TopNav({
 
             {showUserDropdown && (
               <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900">{currentUser?.username}</p>
+                  <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+                </div>
                 <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50">Profile Settings</button>
                 <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50">Help & Support</button>
                 <div className="border-t border-gray-100 my-1"></div>
                 <button 
                   className="w-full px-4 py-2 text-left font-inter text-sm text-red-600 hover:bg-red-50"
-                  onClick={() => navigate("/login")}
+                  onClick={() => {
+                    onSignOut();
+                    navigate("/login");
+                  }}
                 >
                   Sign Out
                 </button>
@@ -168,8 +187,8 @@ export default function TopNav({
             <Link to="/dashboard" className="text-green-600 hover:text-green-800 transition-colors">
               Dashboard
             </Link>
-            <span className="text-gray-400"></span>
-            <span className="text-gray-700">Project {projectName}</span>
+            <span className="text-gray-400">›</span>
+            <span className="text-gray-700">{projectName || 'Project'}</span>
           </nav>
 
           {/* User Avatars */}

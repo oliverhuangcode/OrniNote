@@ -79,8 +79,32 @@ const shapeDataSchema = new Schema({
     required: true
   },
   coordinates: {
-    type: Schema.Types.Mixed,
-    required: true
+    type: Schema.Types.Mixed, // Allows both number[][] and number[]
+    required: true,
+    validate: {
+      validator: function(coords) {
+        // const type = this.parseInt().type;
+        const type = this.parent().type;
+        
+        switch(type) {
+          case 'rectangle':
+            return validateRectangleCoordinates(coords);
+          
+          case 'polygon':
+            return validatePolygonCoordinates(coords);
+          
+          case 'line':
+            return validateLineCoordinates(coords);
+          
+          case 'point':
+            return validatePointCoordinates(coords);
+          
+          default:
+            return false;
+        }
+      },
+      message: 'Invalid coordinates for the specified shape type'
+    }
   },
   isNormalised: {
     type: Boolean,
