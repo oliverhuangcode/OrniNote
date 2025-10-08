@@ -1,24 +1,17 @@
 import type { User } from "@liveblocks/client";
 import { Link, useNavigate } from "react-router-dom";
 import { ActiveFile } from "../types";
+import { Menu, MenuItem, MenuItems, MenuButton } from "@headlessui/react";
 
 interface TopNavProps {
   projectName?: string;
   activeFiles: ActiveFile[];
-  showShareModal: boolean;
-  showExportModal: boolean;
-  showUserDropdown: boolean;
-  showFileMenu: boolean;
-  showEditMenu: boolean;
-  showViewMenu: boolean;
   onSwitchFile: (fileId: string) => void;
   onCloseFile: (fileId: string) => void;
   onShowShareModal: () => void;
   onShowExportModal: () => void;
-  onToggleUserDropdown: () => void;
-  onToggleFileMenu: () => void;
-  onToggleEditMenu: () => void;
-  onToggleViewMenu: () => void;
+  onShowCreateModal: () => void;
+  onShowOpenModal: () => void;
   onCanvasZoom: (direction: "in" | "out" | "reset") => void;
   onAddImage: () => void;
   others: readonly User<any, any>[];
@@ -33,20 +26,12 @@ interface TopNavProps {
 export default function TopNav({
   projectName,
   activeFiles,
-  showShareModal,
-  showExportModal,
-  showUserDropdown,
-  showFileMenu,
-  showEditMenu,
-  showViewMenu,
   onSwitchFile,
   onCloseFile,
   onShowShareModal,
   onShowExportModal,
-  onToggleUserDropdown,
-  onToggleFileMenu,
-  onToggleEditMenu,
-  onToggleViewMenu,
+  onShowCreateModal,
+  onShowOpenModal,
   onCanvasZoom,
   onAddImage,
   others,
@@ -73,80 +58,111 @@ export default function TopNav({
             </Link>
 
             {/* File Menu */}
-            <div className="relative">
-              <button
-                className="font-inter text-base text-black hover:text-green-600 transition-colors"
-                onClick={onToggleFileMenu}
-              >
+            <Menu as="div" className="relative inline-block text-left">
+              <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
                 File
-              </button>
-              {showFileMenu && (
-                <div className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleFileMenu(); console.log("New")}}>New Project</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleFileMenu(); console.log("Open")}}>Open</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleFileMenu(); console.log("Save")}}>Save</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleFileMenu(); onShowExportModal()}}>Export...</button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleFileMenu(); navigate("/dashboard")}}>Close Project</button>
-                </div>
-              )}
-            </div>
+              </MenuButton>
+              <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 focus:outline-none">
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={onShowCreateModal}
+                >
+                  New Project
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={onShowOpenModal}
+                >
+                  Open
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={() => console.log("Save")}
+                >
+                  Save
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={onShowExportModal}
+                >
+                  Export
+                </MenuItem>
+                <div className="border-t border-gray-100 my-1" />
+                <MenuItem as={Link} to="/dashboard"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                >
+                  Close Project
+                </MenuItem>
+              </MenuItems>
+            </Menu>
 
             {/* Edit Menu */}
-            <div className="relative">
-              <button
-                className="font-inter text-base text-black hover:text-green-600 transition-colors"
-                onClick={onToggleEditMenu}
-              >
+            <Menu as="div" className="relative inline-block text-left">
+              <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
                 Edit
-              </button>
-              {showEditMenu && (
-                <div className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleEditMenu(); console.log("Undo")}}>Undo</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleEditMenu(); console.log("Redo")}}>Redo</button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleEditMenu(); console.log("Cut")}}>Cut</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleEditMenu(); console.log("Copy")}}>Copy</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleEditMenu(); console.log("Paste")}}>Paste</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleEditMenu(); console.log("Delete")}}>Delete</button>
-                </div>
-              )}
-            </div>
+              </MenuButton>
+              <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 focus:outline-none">
+                {["Undo", "Redo", "Cut", "Copy", "Paste", "Delete"].map(action => (
+                  <MenuItem as="button"
+                    key={action}
+                    className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                    onClick={() => console.log(action)}
+                  >
+                    {action}
+                  </MenuItem>
+                ))}
+              </MenuItems>
+            </Menu>
 
             {/* View Menu */}
-            <div className="relative">
-              <button
-                className="font-inter text-base text-black hover:text-green-600 transition-colors"
-                onClick={onToggleViewMenu}
-              >
+            <Menu as="div" className="relative inline-block text-left">
+              <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
                 View
-              </button>
-              {showViewMenu && (
-                <div className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleViewMenu(); onCanvasZoom("in")}}>Zoom In</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleViewMenu(); onCanvasZoom("out")}}>Zoom Out</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleViewMenu(); onCanvasZoom("reset")}}>Actual Size</button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleViewMenu(); console.log("Show Grid")}}>Show Grid</button>
-                  <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50" onClick={() => {onToggleViewMenu(); console.log("Show Rulers")}}>Show Rulers</button>
-                </div>
-              )}
-            </div>
-
-            <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Annotation menu")}>Annotation</button>
-            <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Layers menu")}>Layers</button>
+              </MenuButton>
+              <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 focus:outline-none">
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={() => onCanvasZoom("in")}
+                >
+                  Zoom In
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={() => onCanvasZoom("out")}
+                >
+                  Zoom Out
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={() => onCanvasZoom("reset")}
+                >
+                  Actual Size
+                </MenuItem>
+                <div className="border-t border-gray-100 my-1" />
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={() => console.log("Show Grid")}
+                >
+                  Show Grid
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
+                  onClick={() => console.log("Show Rulers")}
+                >
+                  Show Rulers
+                </MenuItem>
+              </MenuItems>
+            </Menu>
+            
+            {/* Static buttons */}
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Tools menu")}>Tools</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={onShowShareModal}>Share</button>
-            <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Settings menu")}>Settings</button>
             <button className="font-inter text-base text-black hover:text-green-600 transition-colors" onClick={() => console.log("Help menu")}>Help</button>
           </div>
 
-          {/* Right side - User Menu */}
-          <div className="relative">
-            <button
-              onClick={onToggleUserDropdown}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
-            >
+          {/* Right Side - User Menu */}
+          <Menu as="div" className="relative inline-block text-left">
+            <MenuButton className="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                 {getUserInitial()}
               </div>
@@ -154,18 +170,27 @@ export default function TopNav({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </button>
-
-            {showUserDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900">{currentUser?.username}</p>
-                  <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
-                </div>
-                <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50">Profile Settings</button>
-                <button className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50">Help & Support</button>
-                <div className="border-t border-gray-100 my-1"></div>
-                <button 
+            </MenuButton>
+            <MenuItems className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <div className="px-4 py-2 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-900">{currentUser?.username}</p>
+                <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+              </div>
+              
+              <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50"
+                  onClick={() => console.log("Profile")}
+                >
+                  Profile Settings
+              </MenuItem>
+              <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left font-inter text-sm hover:bg-gray-50"
+                  onClick={() => console.log("Profile")}
+                >
+                  Help & Support
+              </MenuItem>
+              <div className="border-t border-gray-100 my-1"></div>
+                <MenuItem as="button" 
                   className="w-full px-4 py-2 text-left font-inter text-sm text-red-600 hover:bg-red-50"
                   onClick={() => {
                     onSignOut();
@@ -173,10 +198,9 @@ export default function TopNav({
                   }}
                 >
                   Sign Out
-                </button>
-              </div>
-            )}
-          </div>
+                </MenuItem>
+            </MenuItems>
+          </Menu>
         </div>
       </nav>
 
@@ -213,7 +237,7 @@ export default function TopNav({
         </div>
       </div>
 
-      {/* File Tabs */}
+      {/* Project File Tabs */}
       {activeFiles.length > 0 && (
         <div className="bg-gray-100 border-b border-gray-200">
           <div className="flex items-center px-4">

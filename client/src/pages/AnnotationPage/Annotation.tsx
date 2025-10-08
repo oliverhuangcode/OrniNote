@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liveblocks/react";
 import { ActiveFile, Layer, ToolbarTool, ImageData } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
@@ -7,6 +7,8 @@ import { projectService } from "../../services/projectService";
 import type { Annotation as AnnotationType } from "./types";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
+import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
+import OpenProject from "../../components/modals/OpenProjectModal/OpenProject";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
@@ -53,6 +55,15 @@ const CURSOR_COLORS = [
 ];
 
 interface ProjectData {
+  name: string;
+  width: number;
+  height: number;
+  imageUrl?: string;
+  imageFilename?: string;
+  teamMembers: string[];
+}
+
+interface Project {
   _id: string;
   name: string;
   description: string;
@@ -88,11 +99,12 @@ export default function Annotation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
+  const navigate = useNavigate();
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
     
   // Project data state
-  const [project, setProject] = useState<ProjectData | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -100,13 +112,11 @@ export default function Annotation() {
   const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false); 
+  const [showOpenModal, setShowOpenModal] = useState(false); 
   const [searchLayers, setSearchLayers] = useState("");
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showFileMenu, setShowFileMenu] = useState(false);
-  const [showEditMenu, setShowEditMenu] = useState(false);
-  const [showViewMenu, setShowViewMenu] = useState(false);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
   const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -115,8 +125,6 @@ export default function Annotation() {
   // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
-
-  // const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3";
 
   // State for current image and label
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
@@ -386,6 +394,37 @@ export default function Annotation() {
       console.error('Failed to save annotation:', error);
     }
   };
+
+  const handleCreateProject = async (projectData: ProjectData) => {
+      try {
+        if (!user) {
+          throw new Error('User not logged in');
+        }
+
+        if (!projectData.imageUrl) {
+          throw new Error('Image URL is required');
+        }
+
+        // Prepare data for backend
+        const backendProjectData = {
+          name: projectData.name,
+          description: '', 
+          imageUrl: projectData.imageUrl,
+          imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
+          imageWidth: projectData.width,
+          imageHeight: projectData.height,
+          ownerId: user._id
+        };
+
+        // Create project in backend
+        const newProject = await projectService.createProject(backendProjectData);
+
+        navigate(`/annotation/${newProject._id}`);
+      } catch (err) {
+        console.error('Failed to create project:', err);
+        setError(err instanceof Error ? err.message : 'Failed to create project');
+      }
+    };
 
   const handleAddImage = async () => {
     // Create file input element
@@ -685,20 +724,12 @@ export default function Annotation() {
       <TopNav
         projectName={project.name}
         activeFiles={activeFiles}
-        showShareModal={showShareModal}
-        showExportModal={showExportModal}
-        showUserDropdown={showUserDropdown}
-        showFileMenu={showFileMenu}
-        showEditMenu={showEditMenu}
-        showViewMenu={showViewMenu}
         onSwitchFile={switchFile}
         onCloseFile={closeFile}
         onShowShareModal={() => setShowShareModal(true)}
         onShowExportModal={() => setShowExportModal(true)}
-        onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
-        onToggleFileMenu={() => setShowFileMenu(!showFileMenu)}
-        onToggleEditMenu={() => setShowEditMenu(!showEditMenu)}
-        onToggleViewMenu={() => setShowViewMenu(!showViewMenu)}
+        onShowCreateModal={() => setShowCreateModal(true)}
+        onShowOpenModal={() => setShowOpenModal(true)}
         onCanvasZoom={handleCanvasZoom}
         onAddImage={handleAddImage}
         others={others}
@@ -791,12 +822,23 @@ export default function Annotation() {
           image: activeFile?.imageUrl || ""
         }}
       />
+      <CreateProject
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreateProject={handleCreateProject}
+      />
+      <OpenProject
+        isOpen={showOpenModal}
+        onClose={() => setShowOpenModal(false)}
+        currentUserId={user?._id ?? ""}
+      />
       <ManageLabels
         isOpen={showManageLabelsModal}
         onClose={() => setShowManageLabelsModal(false)}
         projectId={project._id}
         onLabelsChanged={handleLabelsChanged}
       />
+      
       {/* Upload Loading Indicator */}
       {isUploadingImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
