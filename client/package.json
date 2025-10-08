@@ -2,10 +2,7 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-  "options": {
-    "allowedHosts": ["localhost", ".localhost"],
-    "proxy": "http://localhost:5000"
-  },
+  "proxy": "http://localhost:5000",
   "dependencies": {
     "@liveblocks/client": "^3.3.4",
     "@liveblocks/react": "^3.3.4",
