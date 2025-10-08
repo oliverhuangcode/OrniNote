@@ -48,8 +48,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // const CURRENT_USER_ID = "68b6f01c33861a8d7edf5ad3"; 
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = () => {

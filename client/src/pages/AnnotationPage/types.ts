@@ -19,6 +19,7 @@ export interface ToolbarTool {
   id: string;
   isSelected: boolean;
   icon: React.ReactNode;
+  label: string;
 }
 
 export interface Point {

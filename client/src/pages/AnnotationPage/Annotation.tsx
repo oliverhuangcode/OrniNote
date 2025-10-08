@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { 
   LiveblocksProvider, 
   RoomProvider, 
@@ -15,6 +15,8 @@ import { projectService } from "../../services/projectService";
 import type { Annotation as AnnotationType } from "./types";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
+import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
+import OpenProject from "../../components/modals/OpenProjectModal/OpenProject";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
 import LayersPanel from "./components/LayersPanel";
@@ -68,6 +70,15 @@ const CURSOR_COLORS = [
 ];
 
 interface ProjectData {
+  name: string;
+  width: number;
+  height: number;
+  imageUrl?: string;
+  imageFilename?: string;
+  teamMembers: string[];
+}
+
+interface Project {
   _id: string;
   name: string;
   description: string;
@@ -103,11 +114,12 @@ export default function Annotation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const others = useOthers();
+  const navigate = useNavigate();
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
     
   // Project data state
-  const [project, setProject] = useState<ProjectData | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -115,13 +127,12 @@ export default function Annotation() {
   const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false); 
+  const [showOpenModal, setShowOpenModal] = useState(false); 
+  const [showGrid, setShowGrid] = useState(false);
   const [searchLayers, setSearchLayers] = useState("");
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showFileMenu, setShowFileMenu] = useState(false);
-  const [showEditMenu, setShowEditMenu] = useState(false);
-  const [showViewMenu, setShowViewMenu] = useState(false);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
   const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -411,6 +422,37 @@ export default function Annotation() {
   };
 
   // Keep all your existing handler functions (handleAddImage, handleToolSelect, etc.)
+  const handleCreateProject = async (projectData: ProjectData) => {
+      try {
+        if (!user) {
+          throw new Error('User not logged in');
+        }
+
+        if (!projectData.imageUrl) {
+          throw new Error('Image URL is required');
+        }
+
+        // Prepare data for backend
+        const backendProjectData = {
+          name: projectData.name,
+          description: '', 
+          imageUrl: projectData.imageUrl,
+          imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
+          imageWidth: projectData.width,
+          imageHeight: projectData.height,
+          ownerId: user._id
+        };
+
+        // Create project in backend
+        const newProject = await projectService.createProject(backendProjectData);
+
+        navigate(`/annotation/${newProject._id}`);
+      } catch (err) {
+        console.error('Failed to create project:', err);
+        setError(err instanceof Error ? err.message : 'Failed to create project');
+      }
+    };
+    
   const handleAddImage = async () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -548,6 +590,11 @@ export default function Annotation() {
     });
   };
 
+  const handleGrid = () => {
+    setShowGrid((prev) => !prev);
+  };
+
+  // Handle mouse movement to update cursor position
   const handlePointerMove = (event: React.PointerEvent) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
@@ -571,51 +618,62 @@ export default function Annotation() {
       id: "move",
       isSelected: selectedTool === "move",
       icon: <Move className={selectedTool === "move" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Move"
     },
     {
       id: "search",
       isSelected: selectedTool === "search",
       icon: <Search className={selectedTool === "search" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Search"
     },
     {
       id: "marquee",
       isSelected: selectedTool === "marquee",
       icon: <Maximize className={selectedTool === "marquee" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Marquee"
     },
     {
       id: "rectangle",
       isSelected: selectedTool === "rectangle",
       icon: <Square className={selectedTool === "rectangle" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Rectangle"
     },
     {
       id: "line",
       isSelected: selectedTool === "line",
       icon: <Minus className={selectedTool === "line" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Line"
     },
     {
       id: "brush",
       isSelected: selectedTool === "brush",
       icon: <Brush className={selectedTool === "brush" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Brush"
+      
     },
     {
       id: "edit",
       isSelected: selectedTool === "edit",
       icon: <Wand2 className={selectedTool === "edit" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Edit"
     },
     {
       id: "text",
       isSelected: selectedTool === "text",
       icon: <Type className={selectedTool === "text" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Textbox"
     },
     {
       id: "eyedropper",
       isSelected: selectedTool === "eyedropper",
       icon: <Pipette className={selectedTool === "eyedropper" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Eyedropper"
     },
     {
       id: "pen",
       isSelected: selectedTool === "pen",
       icon: <Pen className={selectedTool === "pen" ? "text-white" : "text-black"} strokeWidth={2.5} size={28} />,
+      label: "Pen"
     },
   ];
 
@@ -689,22 +747,18 @@ export default function Annotation() {
       <TopNav
         projectName={project.name}
         activeFiles={activeFiles}
-        showShareModal={showShareModal}
-        showExportModal={showExportModal}
-        showUserDropdown={showUserDropdown}
-        showFileMenu={showFileMenu}
-        showEditMenu={showEditMenu}
-        showViewMenu={showViewMenu}
         onSwitchFile={switchFile}
         onCloseFile={closeFile}
         onShowShareModal={() => setShowShareModal(true)}
         onShowExportModal={() => setShowExportModal(true)}
-        onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
-        onToggleFileMenu={() => setShowFileMenu(!showFileMenu)}
-        onToggleEditMenu={() => setShowEditMenu(!showEditMenu)}
-        onToggleViewMenu={() => setShowViewMenu(!showViewMenu)}
+        onShowCreateModal={() => setShowCreateModal(true)}
+        onShowOpenModal={() => setShowOpenModal(true)}
         onCanvasZoom={handleCanvasZoom}
+        onShowGrid={handleGrid}
+        showGrid={showGrid}
         onAddImage={handleAddImage}
+        tools={toolbarTools}
+        onSelectTool={(toolId) => setSelectedTool(toolId)}
         others={others}
         cursorColors={CURSOR_COLORS}
         currentUser={user ? { username: user.username, email: user.email } : undefined}
@@ -740,6 +794,7 @@ export default function Annotation() {
           setSelectedAnnotationId={setSelectedAnnotationId}
           projectImage={activeFile}
           onAnnotationCreated={saveAnnotationToDatabase}
+          showGrid = {showGrid} 
         />
         <LayersPanel
           search={searchLayers}
@@ -792,12 +847,24 @@ export default function Annotation() {
           image: activeFile?.imageUrl || ""
         }}
       />
+      <CreateProject
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreateProject={handleCreateProject}
+      />
+      <OpenProject
+        isOpen={showOpenModal}
+        onClose={() => setShowOpenModal(false)}
+        currentUserId={user?._id ?? ""}
+      />
       <ManageLabels
         isOpen={showManageLabelsModal}
         onClose={() => setShowManageLabelsModal(false)}
         projectId={project._id}
         onLabelsChanged={handleLabelsChanged}
       />
+      
+      {/* Upload Loading Indicator */}
       {isUploadingImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 shadow-xl">
