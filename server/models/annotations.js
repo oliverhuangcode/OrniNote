@@ -79,38 +79,8 @@ const shapeDataSchema = new Schema({
     required: true
   },
   coordinates: {
-    type: Schema.Types.Mixed, // Allows both number[][] and number[]
-    required: true,
-    validate: {
-      validator: function(coords) {
-        const type = this.parent().type;
-        
-        switch(type) {
-          case 'rectangle':
-            return validateRectangleCoordinates(coords);
-          
-          case 'polygon':
-            return validatePolygonCoordinates(coords);
-          
-          case 'line':
-            return validateLineCoordinates(coords);
-          
-          case 'point':
-            return validatePointCoordinates(coords);
-
-          case 'path':
-          case 'brush':
-            return validatePathCoordinates(coords);
-          
-          case 'text':
-            return validateTextCoordinates(coords);
-          
-          default:
-            return false;
-        }
-      },
-      message: 'Invalid coordinates for the specified shape type'
-    }
+    type: Schema.Types.Mixed,
+    required: true
   },
   isNormalised: {
     type: Boolean,
@@ -118,6 +88,53 @@ const shapeDataSchema = new Schema({
   }
 },
 { _id: false });
+
+// Add schema-level validation instead of field-level
+shapeDataSchema.pre('validate', function(next) {
+  const coords = this.coordinates;
+  const type = this.type;
+  
+  console.log('Pre-validate: Checking coordinates for type:', type, coords);
+  
+  let isValid = false;
+  
+  switch(type) {
+    case 'rectangle':
+      isValid = validateRectangleCoordinates(coords);
+      break;
+    
+    case 'polygon':
+      isValid = validatePolygonCoordinates(coords);
+      break;
+    
+    case 'line':
+      isValid = validateLineCoordinates(coords);
+      break;
+    
+    case 'point':
+      isValid = validatePointCoordinates(coords);
+      break;
+
+    case 'path':
+    case 'brush':
+      isValid = validatePathCoordinates(coords);
+      break;
+    
+    case 'text':
+      isValid = validateTextCoordinates(coords);
+      break;
+    
+    default:
+      console.error('Unknown shape type in validation:', type);
+      isValid = false;
+  }
+  
+  if (!isValid) {
+    this.invalidate('coordinates', 'Invalid coordinates for the specified shape type');
+  }
+  
+  next();
+});
 
 const annotationSchema = new Schema({
   imageId: {
