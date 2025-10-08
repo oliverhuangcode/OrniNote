@@ -1,7 +1,7 @@
 export interface ShapeData {
-  type: 'rectangle' | 'polygon' | 'line' | 'point' | 'circle';
+  type: 'rectangle' | 'polygon' | 'line' | 'point' | 'path' | 'brush' | 'text';
   coordinates: any;
-  isNormalized: boolean;
+  isNormalised: boolean;
 }
 
 export interface AnnotationData {

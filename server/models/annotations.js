@@ -49,10 +49,33 @@ const validatePointCoordinates = (coords) => {
   );
 };
 
+const validatePathCoordinates = (coords) => {
+  return (
+    coords &&
+    Array.isArray(coords.points) &&
+    coords.points.length >= 2 &&
+    coords.points.every((p) => 
+      Array.isArray(p) && 
+      p.length === 2 && 
+      typeof p[0] === 'number' && 
+      typeof p[1] === 'number'
+    )
+  );
+};
+
+const validateTextCoordinates = (coords) => {
+  return (
+    coords &&
+    typeof coords.x === 'number' &&
+    typeof coords.y === 'number' &&
+    (coords.text === undefined || typeof coords.text === 'string')
+  );
+};
+
 const shapeDataSchema = new Schema({
   type: {
     type: String,
-    enum: ['rectangle', 'polygon', 'line', 'point'],
+    enum: ['rectangle', 'polygon', 'line', 'point', 'path', 'brush', 'text'],
     required: true
   },
   coordinates: {
@@ -60,7 +83,7 @@ const shapeDataSchema = new Schema({
     required: true,
     validate: {
       validator: function(coords) {
-        const type = this.parseInt().type;
+        const type = this.parent().type;
         
         switch(type) {
           case 'rectangle':
@@ -74,6 +97,13 @@ const shapeDataSchema = new Schema({
           
           case 'point':
             return validatePointCoordinates(coords);
+
+          case 'path':
+          case 'brush':
+            return validatePathCoordinates(coords);
+          
+          case 'text':
+            return validateTextCoordinates(coords);
           
           default:
             return false;
