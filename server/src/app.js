@@ -10,6 +10,7 @@ import projectRoutes from './routes/project.js';
 import inviteRoutes from './routes/invite.js';
 import annotationRoutes from './routes/annotation.js';
 import labelRoutes from './routes/label.js';
+import liveblocksRoutes from './routes/liveblocks.js';
 
 // Load environment variables
 dotenv.config();
@@ -53,6 +54,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/annotations', annotationRoutes);
 app.use('/api/labels', labelRoutes);
+app.use('/api/liveblocks', liveblocksRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

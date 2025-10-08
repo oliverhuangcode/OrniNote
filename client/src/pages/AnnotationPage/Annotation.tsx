@@ -896,7 +896,35 @@ export function AnnotationCanvas() {
   }
 
   return (
-    <LiveblocksProvider publicApiKey="pk_dev_eH0jmBFlrKAt3C8vX8ZZF53cmXb5W6XoCyGx2A9NGCZV3-v2P-gqUav-vAvszF1x">
+    <LiveblocksProvider
+      authEndpoint={async (room) => {
+      const token = localStorage.getItem('auth_token');
+      
+      console.log('Token from localStorage:', token);
+      console.log('Room:', room);
+      
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+      
+      const response = await fetch('/api/liveblocks/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ room })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Auth failed:', errorText);
+        throw new Error('Failed to authenticate with Liveblocks');
+      }
+      
+      return await response.json();
+    }}
+    >
       <RoomProvider
         id={roomId}
         initialPresence={{ 
