@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
+import ExportLabelSelector from "./ExportLabelSelector";
 
 interface ExportProps {
   isOpen: boolean;
   onClose: () => void;
   projectData?: {
+    id: string;
     name: string;
     image?: string;
     annotations: any[];
@@ -15,46 +17,28 @@ type ExportFormat = "JSON" | "XML" | "TXT";
 type ExportPages = "all" | "custom";
 
 const formatOptions: ExportFormat[] = ["JSON", "XML", "TXT"];
-const pageOptions = [
-  { value: "all", label: "All pages" },
-  { value: "custom", label: "Customised" },
-];
 
 export default function Export({ isOpen, onClose, projectData }: ExportProps) {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("JSON");
-  const [selectedPages, setSelectedPages] = useState<ExportPages>("all");
-  const [customPages, setCustomPages] = useState("");
+  const [selectedLabels, setselectedLabels] = useState<ExportPages>("all");
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
 
   // Map annotationSchema to exportable format
   const mapAnnotationForExport = (ann: any) => ({
+    labelId: ann.labelId,
     label: ann.labelName,
     type: ann.type, 
-    shapeData: ann.properties,
-    page: ann.page ?? 1
+    shapeData: ann.properties
   });
 
-  // Filter annotations based on pages
+  // Filter annotations based on labels 
   const getFilteredAnnotations = () => {
     if (!projectData) return [];
-    if (selectedPages === "all") return projectData.annotations.map(mapAnnotationForExport);
 
-    if (selectedPages === "custom" && customPages) {
-      const pagesSet = new Set<number>();
-      customPages.split(",").forEach(part => {
-        if (part.includes("-")) {
-          const [start, end] = part.split("-").map(Number);
-          for (let i = start; i <= end; i++) pagesSet.add(i);
-        } else {
-          pagesSet.add(Number(part));
-        }
-      });
-      return projectData.annotations
-        .map(mapAnnotationForExport)
-        .filter(a => pagesSet.has(a.page));
-    }
-
-    return projectData.annotations.map(mapAnnotationForExport);
-  };
+    return projectData.annotations
+      .filter((a) => selectedLabelIds.includes(a.labelId))
+      .map(mapAnnotationForExport);
+};
 
   // Generate export data 
   const generateExportData = () => {
@@ -67,7 +51,10 @@ export default function Export({ isOpen, onClose, projectData }: ExportProps) {
 
     switch (selectedFormat) {
       case "JSON":
-        return JSON.stringify(exportData, null, 2);
+        return JSON.stringify(exportData, (key, value) => {
+            if (key === "labelId") return undefined; // remove labelId
+            return value;
+          }, 2);
       case "XML":
         return generateXML(exportData);
       case "TXT":
@@ -77,7 +64,6 @@ export default function Export({ isOpen, onClose, projectData }: ExportProps) {
     }
   };
 
-  // Format generators 
   const generateXML = (data: any) => {
     const indent = (level: number, text: string) => '  '.repeat(level) + text;
 
@@ -179,7 +165,6 @@ const generateTXT = (data: any) => {
 
   return output;
 };
-
 
   // Main export handler 
   const handleExport = () => {
@@ -289,41 +274,12 @@ const generateTXT = (data: any) => {
             </Menu>
           </div>
 
-          {/* Pages Menu */}
-          <div className="mb-5">
-            <h3 className="font-inter font-bold text-base text-gray-800 mb-4">Pages</h3>
-            <Menu as="div" className="relative">
-              <MenuButton className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 rounded-lg font-inter text-gray-600 hover:border-gray-400">
-                {pageOptions.find((opt) => opt.value === selectedPages)?.label}
-                <svg width="12" height="7" viewBox="0 0 12 7" fill="none">
-                  <path d="M1.13623 1.12451L5.79532 5.77849L10.4544 1.12451" stroke="black" strokeWidth="1.4" />
-                </svg>
-              </MenuButton>
-              <MenuItems className="relative mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg focus:outline-none">
-                {pageOptions.map((option) => (
-                  <MenuItem key={option.value}>
-                      <button
-                        onClick={() => setSelectedPages(option.value as ExportPages)}
-                        className="w-full text-left px-4 py-2 font-inter text-sm"
-                      >
-                        {option.label}
-                      </button>
-                  </MenuItem>
-                ))}
-              </MenuItems>
-            </Menu>
-          </div>
-
-          {/* Custom Page Input */}
-          {selectedPages === "custom" && (
-            <input
-              type="text"
-              value={customPages}
-              onChange={(e) => setCustomPages(e.target.value)}
-              placeholder="e.g. 1, 3, 5-7"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ml-green"
+          {/* Labels Menu */}
+          <ExportLabelSelector
+            projectId={projectData?.id || ""}
+            selectedLabelIds={selectedLabelIds}
+            onSelectionChange={setSelectedLabelIds}
             />
-          )}
 
           {/* Export Button */}
           <button

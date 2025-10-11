@@ -842,6 +842,7 @@ export default function Annotation() {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         projectData={{
+          id: project._id,
           name: project.name,
           annotations: annotations,
           image: activeFile?.imageUrl || ""
