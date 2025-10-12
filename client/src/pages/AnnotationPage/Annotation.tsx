@@ -4,12 +4,14 @@ import { LiveblocksProvider, RoomProvider, useOthers, useMyPresence } from "@liv
 import { ActiveFile, Layer, ToolbarTool } from "./types";
 import { Move, Search, Maximize, Square, Minus, Brush, Type, Pipette, Wand2, Pen } from "lucide-react";
 import { projectService } from "../../services/projectService";
+import { useAnnotationStorage } from "../../hooks/useAnnotationStorage";
+import { MongoAnnotation, MongoLabel } from "../../services/annotationExportService";
 import type { Annotation as AnnotationType } from "./types";
 import ShareProject from "../../components/modals/ShareProjectModal/ShareProject";
 import Export from "../../components/modals/ExportModal/Export";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
-import LayersPanel from "./components/LayersPanel";
+import LabelPanel from "./components/LabelPanel";
 import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
 import "../../styles/globals.css";
@@ -41,7 +43,6 @@ const CURSOR_COLORS = [
   "#9575CD", 
   "#4FC3F7",
   "#81C784",
-  // "#FFF176",
   "#FF8A65",
   "#F06292",
   "#7986CB",
@@ -92,7 +93,6 @@ export default function Annotation() {
   const [activeFiles, setActiveFiles] = useState<ActiveFile[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [searchLayers, setSearchLayers] = useState("");
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -103,17 +103,42 @@ export default function Annotation() {
   const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  
+  // Labels and MongoDB annotations
+  const [labels, setLabels] = useState<MongoLabel[]>([]);
+  const [currentLabelId, setCurrentLabelId] = useState<string>('');
+  const [mongoAnnotations, setMongoAnnotations] = useState<MongoAnnotation[]>([]);
 
   // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
 
+  // Get current user ID (you'll need to implement this based on your auth system)
+  const currentUserId = project?.owner._id || ''; // Replace with actual user ID from auth context
+
+  // Initialize annotation storage hook
+  const annotationStorage = useAnnotationStorage({
+    imageId: activeFiles.find(f => f.isActive)?._id || '',
+    projectId: projectId || '',
+    userId: currentUserId,
+    apiBaseUrl: '/api'
+  });
+
   // Load project data on mount
   useEffect(() => {
     if (projectId) {
       loadProject();
+      loadLabels();
     }
   }, [projectId]);
+
+  // Load annotations when active file changes
+  useEffect(() => {
+    const activeFile = activeFiles.find(f => f.isActive);
+    if (activeFile?._id) {
+      loadAnnotationsForImage(activeFile._id);
+    }
+  }, [activeFiles]);
 
   const loadProject = async () => {
     try {
@@ -132,16 +157,16 @@ export default function Annotation() {
       // Set up active files based on project images
       if (projectData.images && projectData.images.length > 0) {
         const files: ActiveFile[] = projectData.images.map((image, index) => ({
+          _id: image._id,
           id: image._id,
           name: image.filename,
-          isActive: index === 0, // First image is active by default
+          isActive: index === 0,
           imageUrl: image.url,
           width: image.width,
           height: image.height
         }));
         setActiveFiles(files);
       } else {
-        // No images in project
         setActiveFiles([]);
       }
 
@@ -153,9 +178,147 @@ export default function Annotation() {
     }
   };
 
+  // In Annotation.tsx, add this useEffect after your other effects (around line 148):
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Delete' && selectedAnnotationId) {
+      handleAnnotationDelete(selectedAnnotationId);
+    }
+  };
+  
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, [selectedAnnotationId]);
+
+  const loadLabels = async () => {
+    try {
+      const response = await fetch(`/api/labels?projectId=${projectId}`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const labelsData = await response.json();
+        setLabels(labelsData);
+        if (labelsData.length > 0) {
+          setCurrentLabelId(labelsData[0]._id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load labels:', err);
+    }
+  };
+
+  const loadAnnotationsForImage = async (imageId: string) => {
+    try {
+      const mongoAnns = await annotationStorage.loadAnnotations();
+      setMongoAnnotations(mongoAnns);
+      
+      // Convert MongoDB annotations to frontend format
+      const frontendAnns = convertMongoToFrontend(mongoAnns);
+      setAnnotations(frontendAnns);
+    } catch (err) {
+      console.error('Failed to load annotations:', err);
+    }
+  };
+
+  // Convert MongoDB annotation to frontend format
+  const convertMongoToFrontend = (mongoAnns: MongoAnnotation[]): AnnotationType[] => {
+    return mongoAnns.map(ann => {
+      const label = labels.find(l => l._id === ann.labelId);
+      const coords = ann.shapeData.coordinates;
+      
+      const frontendAnn: AnnotationType = {
+        id: ann._id,
+        type: ann.shapeData.type as any,
+        properties: {
+          style: {
+            color: label?.colour || selectedColor,
+            strokeWidth: 2
+          }
+        }
+      };
+
+      if (ann.shapeData.type === 'rectangle') {
+        if (Array.isArray(coords[0])) {
+          const [[x, y], [w, h]] = coords as number[][];
+          frontendAnn.properties.position = { x, y };
+          frontendAnn.properties.width = w;
+          frontendAnn.properties.height = h;
+        } else {
+          const [x, y, w, h] = coords as number[];
+          frontendAnn.properties.position = { x, y };
+          frontendAnn.properties.width = w;
+          frontendAnn.properties.height = h;
+        }
+      } else if (ann.shapeData.type === 'polygon' || ann.shapeData.type === 'line') {
+        frontendAnn.properties.points = (coords as number[][]).map(([x, y]) => ({ x, y }));
+      } else if (ann.shapeData.type === 'point') {
+        const [x, y] = coords as number[];
+        frontendAnn.properties.position = { x, y };
+      }
+
+      return frontendAnn;
+    });
+  };
+
+  // Save annotation to MongoDB
+  const handleAnnotationComplete = async (newAnnotation: AnnotationType) => {
+    if (!currentLabelId) {
+      alert('Please select a label before creating annotations');
+      return;
+    }
+
+    const savedAnnotation = await annotationStorage.saveAnnotation(
+      newAnnotation,
+      currentLabelId
+    );
+
+    if (savedAnnotation) {
+      setAnnotations(prev => [...(prev || []), {
+  ...newAnnotation,
+  id: savedAnnotation._id
+}]);
+setMongoAnnotations(prev => [...(prev || []), savedAnnotation]);
+    } else if (annotationStorage.error) {
+      alert(`Failed to save annotation: ${annotationStorage.error}`);
+    }
+  };
+
+  // Update annotation in MongoDB
+  const handleAnnotationUpdate = async (annotationId: string, updatedAnnotation: AnnotationType) => {
+    const success = await annotationStorage.updateAnnotation(
+      annotationId,
+      updatedAnnotation,
+      currentLabelId
+    );
+
+    if (success) {
+      setAnnotations(prev =>
+  (prev || []).map(ann => ann.id === annotationId ? updatedAnnotation : ann)
+);
+      // Reload MongoDB annotations
+      const activeFile = activeFiles.find(f => f.isActive);
+      if (activeFile?._id) {
+        loadAnnotationsForImage(activeFile._id);
+      }
+    } else if (annotationStorage.error) {
+      alert(`Failed to update annotation: ${annotationStorage.error}`);
+    }
+  };
+
+  // Delete annotation from MongoDB
+  const handleAnnotationDelete = async (annotationId: string) => {
+    const success = await annotationStorage.deleteAnnotation(annotationId);
+
+    if (success) {
+      setAnnotations(prev => (prev || []).filter(ann => ann.id !== annotationId));
+      setMongoAnnotations(prev => (prev || []).filter(ann => ann._id !== annotationId));
+    } else if (annotationStorage.error) {
+      alert(`Failed to delete annotation: ${annotationStorage.error}`);
+    }
+  };
+
   const handleToolSelect = (toolId: string) => {
     setSelectedTool(toolId);
-    // Update presence to share selected tool with others
     updateMyPresence({ 
       cursor,
       selectedTool: toolId,
@@ -165,7 +328,6 @@ export default function Annotation() {
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
-    // Update presence to share selected color with others
     updateMyPresence({ 
       cursor,
       selectedTool,
@@ -177,11 +339,10 @@ export default function Annotation() {
     setCanvasZoom(prev => {
       if (direction === "in") return Math.min(prev + 25, 200);
       if (direction === "out") return Math.max(prev - 25, 25);
-      return 100; // reset
+      return 100;
     });
   };
 
-  // Handle mouse movement to update cursor position
   const handlePointerMove = (event: React.PointerEvent) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
@@ -196,8 +357,6 @@ export default function Annotation() {
     });
   };
 
-
-  // Handle mouse leave to hide cursor
   const handlePointerLeave = () => {
     updateMyPresence({ 
       cursor: null,
@@ -205,6 +364,70 @@ export default function Annotation() {
       selectedColor 
     });
   };
+
+  // Enhanced setAnnotations that saves to MongoDB
+  const handleSetAnnotations = (newAnnotations: AnnotationType[] | ((prev: AnnotationType[]) => AnnotationType[])) => {
+  setAnnotations(newAnnotations);
+};
+
+  const handleCreateLabel = async (name: string, color: string) => {
+  try {
+    const response = await fetch('/api/labels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        projectId: projectId,
+        name,
+        colour: color
+      })
+    });
+    
+    if (response.ok) {
+      const newLabel = await response.json();
+      setLabels(prev => [...(prev || []), newLabel]);
+      setCurrentLabelId(newLabel._id);
+    }
+  } catch (err) {
+    console.error('Failed to create label:', err);
+  }
+};
+
+const handleUpdateLabel = async (labelId: string, name: string, color: string) => {
+  try {
+    const response = await fetch(`/api/labels/${labelId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name, colour: color })
+    });
+    
+    if (response.ok) {
+      const updated = await response.json();
+      setLabels(prev => (prev || []).map(l => l._id === labelId ? updated : l));
+    }
+  } catch (err) {
+    console.error('Failed to update label:', err);
+  }
+};
+
+const handleDeleteLabel = async (labelId: string) => {
+  try {
+    const response = await fetch(`/api/labels/${labelId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      setLabels(prev => (prev || []).filter(l => l._id !== labelId));
+      if (currentLabelId === labelId) {
+        setCurrentLabelId(labels[0]?._id || '');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to delete label:', err);
+  }
+};
 
   const toolbarTools: ToolbarTool[] = [
     {
@@ -259,15 +482,9 @@ export default function Annotation() {
     },
   ];
 
-  // Dynamic layers - start with empty and allow users to create as needed
-  const layers: Layer[] = [
-    { id: "1", name: "Annotations", visible: true, locked: false },
-  ];
-
   const closeFile = (fileId: string) => {
     setActiveFiles(prev => {
       const newFiles = prev.filter(file => file.id !== fileId);
-      // If we closed the active file, make the first remaining file active
       if (newFiles.length > 0 && !newFiles.some(f => f.isActive)) {
         newFiles[0].isActive = true;
       }
@@ -281,10 +498,8 @@ export default function Annotation() {
     );
   };
 
-  // Get current active file
   const activeFile = activeFiles.find(file => file.isActive);
 
-  // Loading state
   if (loading) {
     return (
       <div className="h-screen bg-white flex items-center justify-center">
@@ -296,7 +511,6 @@ export default function Annotation() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="h-screen bg-white flex items-center justify-center">
@@ -314,7 +528,6 @@ export default function Annotation() {
     );
   }
 
-  // No project found
   if (!project) {
     return (
       <div className="h-screen bg-white flex items-center justify-center">
@@ -328,7 +541,7 @@ export default function Annotation() {
 
   return (
     <div 
-      className="h-screen bg-white flex flex-col "
+      className="h-screen bg-white flex flex-col"
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
     >
@@ -354,7 +567,6 @@ export default function Annotation() {
         cursorColors={CURSOR_COLORS}
       />
 
-      {/* Main Content */}
       <div className="flex flex-1 relative" ref={containerRef}>
         <LeftToolbar
           tools={toolbarTools}
@@ -368,22 +580,24 @@ export default function Annotation() {
           selectedTool={selectedTool}
           selectedColor={selectedColor}
           annotations={annotations}
-          setAnnotations={setAnnotations}
+          setAnnotations={handleSetAnnotations}
           currentAnnotation={currentAnnotation}
           setCurrentAnnotation={setCurrentAnnotation}
           isDrawing={isDrawing}
           setIsDrawing={setIsDrawing}
           selectedAnnotationId={selectedAnnotationId}
           setSelectedAnnotationId={setSelectedAnnotationId}
-          projectImage={activeFile} // Pass the active file/image data
+          projectImage={activeFile}
         />
-        <LayersPanel
-          search={searchLayers}
-          onSearchChange={setSearchLayers}
-          layers={layers}
-        />
+        <LabelPanel
+  labels={labels}
+  selectedLabelId={currentLabelId}
+  onSelectLabel={setCurrentLabelId}
+  onCreateLabel={handleCreateLabel}
+  onUpdateLabel={handleUpdateLabel}
+  onDeleteLabel={handleDeleteLabel}
+/>
 
-        {/* Other users' cursors */}
         {others.map(({ connectionId, presence }) => {
           if (!presence?.cursor) return null;
           
@@ -394,7 +608,6 @@ export default function Annotation() {
                 x={presence.cursor.x}
                 y={presence.cursor.y}
               />
-              {/* Show other users' selected tools */}
               {presence.selectedTool && (
                 <div 
                   className="absolute bg-black/80 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap"
@@ -417,28 +630,31 @@ export default function Annotation() {
         })}
       </div>
 
-      {/* Modals */}
       <ShareProject
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         projectId={project._id}
         projectName={project.name}
       />
-      <Export
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        projectData={{
-          name: project.name,
-          annotations: annotations,
-          image: activeFile?.imageUrl || ""
-        }}
-      />
+<Export
+  isOpen={showExportModal}
+  onClose={() => setShowExportModal(false)}
+  projectData={{
+    name: project.name,
+    annotations: mongoAnnotations,
+    labels: labels,
+    image: activeFile && activeFile.imageUrl ? {
+      url: activeFile.imageUrl,
+      width: activeFile.width || 800,
+      height: activeFile.height || 600
+    } : undefined
+  }}
+/>
     </div>
   );
 }
 
 export function AnnotationCanvas() {
-  // Generate a unique room ID based on project ID or use a default
   const { id: projectId } = useParams();
   const roomId = projectId ? `annotation-${projectId}` : "annotation-default";
 

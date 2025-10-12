@@ -1,6 +1,7 @@
 // client/src/pages/AnnotationPage/types.ts
 
 export interface ActiveFile {
+  _id: string;
   id: string;
   name: string;
   isActive: boolean;
