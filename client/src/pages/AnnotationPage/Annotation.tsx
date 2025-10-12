@@ -19,14 +19,13 @@ import CreateProject from "../../components/modals/CreateProjectModal/CreateProj
 import OpenProject from "../../components/modals/OpenProjectModal/OpenProject";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
-import LayersPanel from "./components/LayersPanel";
+import LabelPanel from "./components/LabelPanel";
 import TopNav from "./components/TopNav";
 import Cursor from "../../components/ui/cursor";
 import "../../styles/globals.css";
 import { s3UploadService } from "../../services/s3UploadService";
 import { annotationService } from '../../services/annotationService';
 import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels";
-import LabelSelector from "./components/LabelSelector";
 import { labelService, Label } from '../../services/labelService';  
 import { getAnonymousName } from "../../utils/mockData";
 import { useAuth } from "../../contexts/authContext";
@@ -130,7 +129,6 @@ export default function Annotation() {
   const [showCreateModal, setShowCreateModal] = useState(false); 
   const [showOpenModal, setShowOpenModal] = useState(false); 
   const [showGrid, setShowGrid] = useState(false);
-  const [searchLayers, setSearchLayers] = useState("");
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
@@ -677,10 +675,6 @@ export default function Annotation() {
     },
   ];
 
-  const layers: Layer[] = [
-    { id: "1", name: "Annotations", visible: true, locked: false },
-  ];
-
   const closeFile = (fileId: string) => {
     setActiveFiles(prev => {
       const newFiles = prev.filter(file => file.id !== fileId);
@@ -765,13 +759,6 @@ export default function Annotation() {
         onSignOut={signout}
       />
 
-      <LabelSelector
-        labels={labels}
-        selectedLabelId={currentLabelId}
-        onSelectLabel={handleLabelSelect}
-        onManageLabels={() => setShowManageLabelsModal(true)}
-      />
-
       <div className="flex flex-1 relative" ref={containerRef}>
         <LeftToolbar
           tools={toolbarTools}
@@ -796,11 +783,12 @@ export default function Annotation() {
           onAnnotationCreated={saveAnnotationToDatabase}
           showGrid = {showGrid} 
         />
-        <LayersPanel
-          search={searchLayers}
-          onSearchChange={setSearchLayers}
-          layers={layers}
-        />
+        <LabelPanel
+  labels={labels}
+  selectedLabelId={currentLabelId}
+  onSelectLabel={handleLabelSelect}
+  onManageLabels={() => setShowManageLabelsModal(true)}
+/>
 
         {/* Other users' cursors */}
         {others.map(({ connectionId, presence }) => {
