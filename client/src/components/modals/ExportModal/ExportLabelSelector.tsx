@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { annotationService } from "../../../services/annotationService";
 
 interface ExportLabelSelectorProps {
@@ -14,6 +14,13 @@ interface Label {
   colour: string;
 }
 
+interface Annotation {
+  _id: string;
+  imageId: string;
+  labelId: Label;
+  shapeData: any;
+}
+
 export default function ExportLabelSelector({
   projectId,
   selectedImageIds,
@@ -24,25 +31,50 @@ export default function ExportLabelSelector({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+// Cache annotations per image
+  const annotationsCache = useRef<Map<string, Annotation[]>>(new Map());
+
   useEffect(() => {
-    loadLabels();
-  }, [projectId, selectedImageIds]);
-
-  const loadLabels = async () => { 
-    try {
-      setLoading(true);
-      const allAnnotations = (
-        await Promise.all(selectedImageIds.map(id => annotationService.getAnnotationsForImage(id)))).flat();
-
-      const labelIdsSet = new Set(allAnnotations.map(a => a.labelId));
-      const uniqueLabelIds = Array.from(labelIdsSet); 
-      setLabels(uniqueLabelIds);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load labels");
-    } finally {
-      setLoading(false);
+    if (!projectId || selectedImageIds.length === 0) {
+      setLabels([]);
+      return;
     }
-  };
+
+    const loadLabelsForSelectedImages = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const allAnnotations: Annotation[] = [];
+
+        for (const imageId of selectedImageIds) {
+          let imageAnnotations = annotationsCache.current.get(imageId);
+          if (!imageAnnotations) {
+            imageAnnotations = await annotationService.getAnnotationsForImage(imageId);
+            annotationsCache.current.set(imageId, imageAnnotations);
+          }
+          allAnnotations.push(...imageAnnotations);
+        }
+
+        // Extract unique labels
+        const labelMap = new Map<string, Label>();
+        allAnnotations.forEach(ann => {
+          if (ann.labelId && !labelMap.has(ann.labelId._id)) {
+            labelMap.set(ann.labelId._id, ann.labelId);
+          }
+        });
+
+        setLabels(Array.from(labelMap.values()));
+      } catch (err: any) {
+        console.error("Failed to load labels:", err);
+        setError(err.message || "Failed to load labels");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLabelsForSelectedImages();
+  }, [projectId, selectedImageIds]);
 
   const allSelected = labels.length > 0 && selectedLabelIds.length === labels.length;
 
