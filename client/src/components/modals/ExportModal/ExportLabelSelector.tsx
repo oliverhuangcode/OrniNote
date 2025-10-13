@@ -96,7 +96,7 @@ export default function ExportLabelSelector({
 
   if (loading) return <p>Loading labels...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
-  if (labels.length === 0) return <p>No labels found for selected images</p>;
+  if (labels.length === 0) return <p>No labels found for the selected image</p>;
 
   return (
     <div>

@@ -227,7 +227,7 @@ const generateTXT = (data: any) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-full max-w-3xl relative flex">
+      <div className="bg-white rounded-2xl max-h-[80vh] w-[50vw] relative flex">
         {/* Close */}
         <button
           onClick={onClose}
@@ -261,7 +261,7 @@ const generateTXT = (data: any) => {
             <h2 className="font-inter font-semibold text-xl text-black">Export</h2>
           </div>
 
-          <div className="w-96 bg-gray-900 rounded-lg max-h-[60vh] overflow-auto">
+          <div className="w-[30vw] bg-gray-900 rounded-lg max-h-[65vh] overflow-auto">
             <pre className="text-xs text-green-400 font-mono leading-relaxed">
               {generateExportData()}
             </pre>
@@ -272,17 +272,18 @@ const generateTXT = (data: any) => {
         <div className="w-px bg-gray-300"></div>
 
         {/* Right Side */}
-        <div className="w-80 p-8 mt-5">
-          <h3 className="font-inter text-base text-gray-600 mb-3">
-            {projectData?.name || "Project Export"}
+        <div className="w-80 p-8 mt-9 overflow-y-auto">
+          <h3 className="font-inter font-bold text-xl text-gray-800 mb-3">
+            {projectData?.name ? `Project ${projectData.name}` : "Project"}
           </h3>
-          <div className="w-full h-36 bg-gray-200 rounded border-2 border-gray-300 overflow-hidden mb-6">
-            {projectData?.name ? (
-              <img src={projectData.name} alt="preview" className="w-full h-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-gray-500">No preview</div>
-            )}
-          </div>
+          {selectedImageIds.length == 1 && (
+            <div className="w-full h-36 bg-gray-200 rounded border-2 border-gray-300 overflow-hidden mb-6">
+                <img 
+                src={imageMap[selectedImageIds[0]].url} 
+                alt="preview" 
+                className="w-full h-auto object-contain" />
+            </div>
+          )}
 
           {/* Format Menu */}
           <div className="mb-6">
@@ -335,6 +336,7 @@ const generateTXT = (data: any) => {
           >
             Export
           </button>
+
         </div>
       </div>
     </div>
