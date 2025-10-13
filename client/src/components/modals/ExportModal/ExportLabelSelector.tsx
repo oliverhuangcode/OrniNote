@@ -1,14 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { labelService, Label } from "../../../services/labelService";
+import { useEffect, useState } from "react";
+import { annotationService } from "../../../services/annotationService";
 
 interface ExportLabelSelectorProps {
   projectId: string;
+  selectedImageIds: string[];
   selectedLabelIds: string[];
   onSelectionChange: (ids: string[]) => void;
 }
 
+interface Label {
+  _id: string;
+  name: string;
+  colour: string;
+}
+
 export default function ExportLabelSelector({
   projectId,
+  selectedImageIds,
   selectedLabelIds,
   onSelectionChange,
 }: ExportLabelSelectorProps) {
@@ -18,13 +26,17 @@ export default function ExportLabelSelector({
 
   useEffect(() => {
     loadLabels();
-  }, [projectId]);
+  }, [projectId, selectedImageIds]);
 
-  const loadLabels = async () => {
+  const loadLabels = async () => { 
     try {
       setLoading(true);
-      const fetched = await labelService.getLabelsForProject(projectId);
-      setLabels(fetched);
+      const allAnnotations = (
+        await Promise.all(selectedImageIds.map(id => annotationService.getAnnotationsForImage(id)))).flat();
+
+      const labelIdsSet = new Set(allAnnotations.map(a => a.labelId));
+      const uniqueLabelIds = Array.from(labelIdsSet); 
+      setLabels(uniqueLabelIds);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load labels");
     } finally {
@@ -52,6 +64,7 @@ export default function ExportLabelSelector({
 
   if (loading) return <p>Loading labels...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
+  if (labels.length === 0) return <p>No labels found for selected images</p>;
 
   return (
     <div>

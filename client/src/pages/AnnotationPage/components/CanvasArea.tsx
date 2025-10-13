@@ -99,11 +99,11 @@ export default function CanvasArea({
     }
   }, [setAnnotations, onAnnotationCreated]);
 
-  const textTool = useTextTool(pixelScale, addAnnotation, selectedColor);
-  const lineTool = useLineTool(addAnnotation, selectedColor);
-  const rectTool = useShapeTool("rectangle", addAnnotation, selectedColor);
-  const brushTool = useBrushTool(addAnnotation, selectedColor);
-  const penTool = usePenTool(addAnnotation, selectedColor);
+  const textTool = useTextTool(pixelScale, addAnnotation, projectImage?.id || "", selectedColor);
+  const lineTool = useLineTool(addAnnotation, projectImage?.id || "", selectedColor);
+  const rectTool = useShapeTool("rectangle", addAnnotation, projectImage?.id || "", selectedColor);
+  const brushTool = useBrushTool(addAnnotation, projectImage?.id || "", selectedColor);
+  const penTool = usePenTool(addAnnotation, projectImage?.id || "", selectedColor);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

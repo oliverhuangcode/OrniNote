@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import type { Annotation } from "../../../types";
 
 // Accept color as a required argument
-export function useLineTool(onCreate: (annotation: Annotation) => void, color: string, options?: { strokeWidth?: number }) {
+export function useLineTool(onCreate: (annotation: Annotation) => void, imageId: string, color: string, options?: { strokeWidth?: number }) {
   const [start, setStart] = useState<{ x: number; y: number } | null>(null);
   const [preview, setPreview] = useState<React.ReactNode | null>(null);
 
@@ -31,6 +31,7 @@ export function useLineTool(onCreate: (annotation: Annotation) => void, color: s
     if (!start) return;
     const ann: Annotation = {
       id: crypto.randomUUID(),
+      imageId,
       type: "line",
       properties: {
         points: [start, { x, y }],

@@ -5,6 +5,7 @@ import type { Annotation } from "../../../types";
 export function useTextTool(
   pixelScale: number,
   onCreate: (annotation: Annotation) => void,
+  imageId: string,
   color: string
 ) {
   const [textInput, setTextInput] = useState("");
@@ -25,6 +26,7 @@ export function useTextTool(
     }
     const a: Annotation = {
       id: crypto.randomUUID(),
+      imageId,
       type: "text",
       properties: {
         position: { x: textInputPos.x, y: textInputPos.y },

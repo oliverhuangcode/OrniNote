@@ -4,6 +4,7 @@ import type { Annotation } from "../../../types";
 // Accept color as a required prop (not just in options)
 export function useBrushTool(
   onCreate: (annotation: Annotation) => void,
+  imageId: string,
   color: string,
   options?: { strokeWidth?: number }
 ) {
@@ -34,6 +35,7 @@ export function useBrushTool(
     }
     const ann: Annotation = {
       id: crypto.randomUUID(),
+      imageId,
       type: "path",
       properties: { points: points.slice(), style: { color, strokeWidth } },
     };

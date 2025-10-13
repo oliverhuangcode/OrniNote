@@ -395,6 +395,31 @@ router.delete('/:projectId/permanent', async (req, res) => {
   }
 });
 
+// Get all images within an existing project
+router.get('/:projectId/images', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Verify project exists
+    const project = await Project.findById(projectId).populate('images');
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // If project exists but has no images, return an empty array
+    const images = project.images || [];
+
+    res.json({ images });
+
+  } catch (error) {
+    console.error('Error fetching images for project:', error);
+    res.status(500).json({
+      error: 'Failed to fetch images for project',
+      message: error.message
+    });
+  }
+});
+
 // Add image to existing project
 router.post('/:projectId/images', async (req, res) => {
   try {
