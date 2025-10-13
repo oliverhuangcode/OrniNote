@@ -227,7 +227,7 @@ const generateTXT = (data: any) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-h-[80vh] w-[50vw] relative flex">
+      <div className="bg-white rounded-2xl max-h-[80vh] w-[45vw] relative flex">
         {/* Close */}
         <button
           onClick={onClose}
@@ -261,7 +261,7 @@ const generateTXT = (data: any) => {
             <h2 className="font-inter font-semibold text-xl text-black">Export</h2>
           </div>
 
-          <div className="w-[30vw] bg-gray-900 rounded-lg max-h-[65vh] overflow-auto">
+          <div className="w-[26vw] bg-gray-900 rounded-lg max-h-[65vh] overflow-auto">
             <pre className="text-xs text-green-400 font-mono leading-relaxed">
               {generateExportData()}
             </pre>
