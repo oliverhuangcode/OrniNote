@@ -40,6 +40,7 @@ import ManageLabels from "../../components/modals/ManageLabelsModal/ManageLabels
 import { labelService, Label } from "../../services/labelService";
 import { getAnonymousName } from "../../utils/mockData";
 import { useAuth } from "../../contexts/authContext";
+import { imageService } from "../../services/imageService";
 
 // Define the types for your presence data
 type CursorPosition = {
@@ -142,8 +143,8 @@ export default function Annotation() {
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
-  const [currentAnnotation, setCurrentAnnotation] =
-    useState<AnnotationType | null>(null);
+  const [allAnnotations, setAllAnnotations] = useState<AnnotationType[]>([]);
+  const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<
     string | null
@@ -178,6 +179,7 @@ export default function Annotation() {
     if (projectId) {
       loadProject();
       loadLabels();
+      loadAnnotationsForProject(projectId);
     }
   }, [projectId]);
 
@@ -278,6 +280,77 @@ export default function Annotation() {
     }
   };
 
+  // Load all annotations within a project
+  const loadAnnotationsForProject = async (projectId: string) => {
+    try {
+      // Fetch all images in project
+      const images = await imageService.getImagesByProject(projectId);
+      console.log(`Found ${images.length} images in project.`);
+      
+      // Fetch all annotations for each image 
+      const annotationPromises = images.map(async (image: any) => {
+        const fetchedAnnotations = await annotationService.getAnnotationsForImage(image._id);
+
+        // Convert annotation data to AnnotationsType format
+        const converted = fetchedAnnotations.map(ann => {
+          let properties: any = {
+            style: {
+              color: ann.labelId.colour,
+              strokeWidth: 2
+            }
+          };
+
+          if (ann.shapeData.type === 'rectangle') {
+            properties.position = {
+              x: ann.shapeData.coordinates.x,
+              y: ann.shapeData.coordinates.y
+            };
+            properties.width = ann.shapeData.coordinates.width;
+            properties.height = ann.shapeData.coordinates.height;
+          } else if (ann.shapeData.type === 'polygon' || ann.shapeData.type === 'line' || ann.shapeData.type === 'path' || ann.shapeData.type === 'brush') {
+            properties.points = ann.shapeData.coordinates.points.map((p: number[]) => ({
+              x: p[0],
+              y: p[1]
+            }));
+          } else if (ann.shapeData.type === 'point' || ann.shapeData.type === 'text') {
+            properties.position = {
+              x: ann.shapeData.coordinates.x,
+              y: ann.shapeData.coordinates.y
+            };
+            if (ann.shapeData.type === 'text' && ann.shapeData.coordinates.text) {
+              properties.text = ann.shapeData.coordinates.text;
+            }
+          }
+
+          return {
+            id: ann._id,
+            imageId: ann.imageId,
+            type: ann.shapeData.type as any,
+            properties: properties,
+            labelId: ann.labelId._id,
+            labelName: ann.labelId.name,
+            createdBy: ann.createdBy._id
+          } as AnnotationType;
+        });
+
+        console.log(`Loaded ${converted.length} annotations for image ${image._id}`);
+        return converted;
+      });
+
+      // Complete all requests 
+      const results = await Promise.all(annotationPromises);
+
+      // Flatten results nested list
+      const allAnnotations = results.flat();
+      console.log(`Total annotations loaded: ${allAnnotations.length}`);
+      
+      setAllAnnotations(allAnnotations);
+      
+    } catch (error) {
+      console.error('Failed to load annotations:', error);
+    }
+  };
+  
   // Load annotations from database
   const loadAnnotationsForImage = async (imageId: string) => {
     try {
@@ -330,17 +403,17 @@ export default function Annotation() {
             }
           }
 
-          return {
-            id: ann._id,
-            type: ann.shapeData.type as any,
-            properties: properties,
-            labelId: ann.labelId._id,
-            labelName: ann.labelId.name,
-            createdBy: ann.createdBy._id,
-          } as AnnotationType;
-        }
-      );
-
+        return {
+          id: ann._id,
+          imageId: ann.imageId,
+          type: ann.shapeData.type as any,
+          properties: properties,
+          labelId: ann.labelId._id,
+          labelName: ann.labelId.name,
+          createdBy: ann.createdBy._id
+        } as AnnotationType;
+      });
+      
       setAnnotations(convertedAnnotations);
       console.log(`Loaded ${convertedAnnotations.length} annotations`);
     } catch (error) {
@@ -1052,9 +1125,9 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         projectData={{
+          id: project._id,
           name: project.name,
-          annotations: annotations,
-          image: activeFile?.imageUrl || "",
+          annotations: allAnnotations
         }}
       />
       <CreateProject

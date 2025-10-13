@@ -4,6 +4,7 @@ import type { Annotation } from "../../../types";
 // Pen tool for drawing polygons by clicking points, closes on clicking the first point
 export function usePenTool(
   onCreate: (annotation: Annotation) => void,
+  imageId: string,
   color: string,
   options?: { strokeWidth?: number }
 ) {
@@ -21,6 +22,7 @@ export function usePenTool(
         // Create the polygon annotation
         const ann: Annotation = {
           id: crypto.randomUUID(),
+          imageId,
           type: "polygon",
           properties: {
             points: [...points, first], // close the shape

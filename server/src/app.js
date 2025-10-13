@@ -4,13 +4,14 @@ import dotenv from 'dotenv';
 import connectToDB from '../config/db.js';
 
 // Import route handlers
-import authRoutes from './routes/auth.js';  // ADD THIS
+import authRoutes from './routes/auth.js'; 
 import uploadRoutes from './routes/upload.js';
 import projectRoutes from './routes/project.js';
 import inviteRoutes from './routes/invite.js';
 import annotationRoutes from './routes/annotation.js';
 import labelRoutes from './routes/label.js';
 import liveblocksRoutes from './routes/liveblocks.js';
+import imageRoutes from './routes/image.js';
 
 // Load environment variables
 dotenv.config();
@@ -48,9 +49,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);  // ADD THIS
+app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/images', imageRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/annotations', annotationRoutes);
 app.use('/api/labels', labelRoutes);

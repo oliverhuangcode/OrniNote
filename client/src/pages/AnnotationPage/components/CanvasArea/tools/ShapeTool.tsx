@@ -7,6 +7,7 @@ export type ShapeKind = "rectangle";
 export function useShapeTool(
   kind: ShapeKind,
   onCreate: (annotation: Annotation) => void,
+  imageId: string,
   color: string,
   options?: { strokeWidth?: number }
 ) {
@@ -62,6 +63,7 @@ export function useShapeTool(
       const h = Math.abs(y - origin.y);
       const ann: Annotation = {
         id: crypto.randomUUID(),
+        imageId,
         type: "rectangle",
         properties: {
           position: { x: x0, y: y0 },

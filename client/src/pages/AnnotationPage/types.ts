@@ -41,6 +41,7 @@ export interface Style {
 
 export interface Annotation {
   id: string;
+  imageId: string;
   type: "rectangle" | "line" | "brush" | "text" | "polygon" | "path";
   properties: {
     position?: Point; // for text or rectangle origin

@@ -2,7 +2,7 @@
 import express from 'express';
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { sendInvite } from '../mailer.js';
+import { sendInvite } from '../middleware/mailer.js';
 import { User } from '../../models/users.js';
 import { Project, Invite } from '../../models/projects.js';
 
