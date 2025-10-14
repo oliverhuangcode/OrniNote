@@ -8,6 +8,7 @@ import { getAnonymousName, getInitials } from "../../../utils/mockData";
 
 interface TopNavProps {
   projectName?: string;
+  currentImage?: ActiveFile;
   activeFiles: ActiveFile[];
   onSwitchFile: (fileId: string) => void;
   onCloseFile: (fileId: string) => void;
@@ -15,6 +16,7 @@ interface TopNavProps {
   onShowExportModal: () => void;
   onShowCreateModal: () => void;
   onShowOpenModal: () => void;
+  onShowHelpModal: () => void;
   onCanvasZoom: (direction: "in" | "out" | "reset") => void;
   onShowGrid: () => void;
   showGrid: boolean;
@@ -24,11 +26,10 @@ interface TopNavProps {
   others: readonly User<any, any>[];
   cursorColors: string[];
   currentUser?: {
-    // ADD THIS
     username: string;
     email: string;
   };
-  onSignOut: () => void; // ADD THIS
+  onSignOut: () => void; 
   onUndo: () => void;
   onRedo: () => void;
   canUndo?: boolean;
@@ -37,6 +38,7 @@ interface TopNavProps {
 
 export default function TopNav({
   projectName,
+  currentImage,
   activeFiles,
   onSwitchFile,
   onCloseFile,
@@ -44,6 +46,7 @@ export default function TopNav({
   onShowExportModal,
   onShowCreateModal,
   onShowOpenModal,
+  onShowHelpModal,
   onCanvasZoom,
   onShowGrid,
   showGrid,
@@ -52,8 +55,8 @@ export default function TopNav({
   onAddImage,
   others,
   cursorColors,
-  currentUser, // ADD THIS
-  onSignOut, // ADD THIS
+  currentUser, 
+  onSignOut, 
   onUndo,
   onRedo,
   canUndo,
@@ -133,28 +136,27 @@ export default function TopNav({
 
             {/* Edit Menu */}
             <Menu as="div" className="relative inline-block text-left">
-  <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
-    Edit
-  </MenuButton>
-  <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-    <MenuItem as="button"
-      className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
-      onClick={onUndo}
-      disabled={!canUndo}
-    >
-      Undo
-    </MenuItem>
-    <MenuItem as="button"
-      className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
-      onClick={onRedo}
-      disabled={!canRedo}
-    >
-      Redo
-    </MenuItem>
-    {/* ...the rest (Cut/Copy/Paste/Delete) */}
-  </MenuItems>
-</Menu>
-
+              <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
+                Edit
+              </MenuButton>
+              <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                >
+                  Undo
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                >
+                  Redo
+                </MenuItem>
+                {/* ...the rest (Cut/Copy/Paste/Delete) */}
+              </MenuItems>
+            </Menu>
 
             {/* View Menu */}
             <Menu as="div" className="relative inline-block text-left">
@@ -208,7 +210,7 @@ export default function TopNav({
             </button>
             <button
               className="font-inter text-base text-black hover:text-green-600 transition-colors"
-              onClick={() => console.log("Help menu")}
+              onClick={onShowHelpModal}
             >
               Help
             </button>
@@ -289,6 +291,8 @@ export default function TopNav({
             </Link>
             <span className="text-gray-400">›</span>
             <span className="text-gray-700">{projectName || "Project"}</span>
+            <span className="text-gray-400">›</span>
+            <span className="text-gray-700">{currentImage?.name || "Image"}</span>
           </nav>
 
           {/* User Avatars */}

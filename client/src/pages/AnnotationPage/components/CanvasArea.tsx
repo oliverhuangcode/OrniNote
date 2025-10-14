@@ -8,6 +8,11 @@ import useBrushTool from "./CanvasArea/tools/BrushTool";
 import usePenTool from "./CanvasArea/tools/PenTool";
 import useSkeletonTool from "./CanvasArea/tools/SkeletonTool";
 
+const MAX_CANVAS_WIDTH = 1600;
+const MAX_CANVAS_HEIGHT = 1200;
+const MIN_CANVAS_WIDTH = 800;
+const MIN_CANVAS_HEIGHT = 600;
+
 interface ActiveFile {
   id: string;
   name: string;
@@ -70,16 +75,44 @@ export default function CanvasArea({
 
   // 🧩 Deep clone helper
   // Safe deep clone for either a single annotation or an array
-const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
-  JSON.parse(JSON.stringify(data));
-
+  const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
+    JSON.parse(JSON.stringify(data));
+  
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement | SVGImageElement>) => {
-    const img = e.currentTarget;
+    const img = e.currentTarget as HTMLImageElement | SVGImageElement;
+
+    const naturalWidth =
+      (img as any).naturalWidth || (img as any).width?.baseVal?.value || 0;
+    const naturalHeight =
+      (img as any).naturalHeight || (img as any).height?.baseVal?.value || 0;
+
+    let scaledWidth = naturalWidth;
+    let scaledHeight = naturalHeight;
+
+    // Scale down if image exceeds max bounds 
+    if (scaledWidth > MAX_CANVAS_WIDTH || scaledHeight > MAX_CANVAS_HEIGHT) {
+      const widthRatio = MAX_CANVAS_WIDTH / scaledWidth;
+      const heightRatio = MAX_CANVAS_HEIGHT / scaledHeight;
+      const scale = Math.min(widthRatio, heightRatio);
+      scaledWidth = Math.round(scaledWidth * scale);
+      scaledHeight = Math.round(scaledHeight * scale);
+    }
+
+    // Scale up if image is below min bounds 
+    if (scaledWidth < MIN_CANVAS_WIDTH || scaledHeight < MIN_CANVAS_HEIGHT) {
+      const widthRatio = MIN_CANVAS_WIDTH / scaledWidth;
+      const heightRatio = MIN_CANVAS_HEIGHT / scaledHeight;
+      const scale = Math.max(widthRatio, heightRatio);
+      scaledWidth = Math.round(scaledWidth * scale);
+      scaledHeight = Math.round(scaledHeight * scale);
+    }
+
     setImageDimensions({
-      width: (img as any).naturalWidth,
-      height: (img as any).naturalHeight,
+      width: scaledWidth,
+      height: scaledHeight,
     });
+
     setImageLoaded(true);
     setImageError(false);
   };
@@ -335,8 +368,8 @@ const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
     return null;
   }, [selectedAnnotationId, annotations]);
 
-  const canvasWidth = Math.max(imageDimensions.width, 800);
-  const canvasHeight = Math.max(imageDimensions.height, 600);
+  const canvasWidth = imageDimensions.width;
+  const canvasHeight = imageDimensions.height;
   const scaledWidth = canvasWidth * pixelScale;
   const scaledHeight = canvasHeight * pixelScale;
 
