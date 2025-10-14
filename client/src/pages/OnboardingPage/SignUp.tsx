@@ -61,36 +61,47 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-highlight via-highlight to-white flex items-center justify-center p-4 lg:p-8">
-      <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+    <div className="min-h-screen bg-gradient-to-br from-highlight via-highlight to-white flex items-center justify-center p-8 lg:p-16 xl:p-24">
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
         
         {/* Left side - Title */}
-        <div className="flex-1 max-w-2xl">
-          <h1 className="font-jetbrains font-extrabold text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl leading-tight tracking-wide">
-            MACHINE LEARNING FOCUSED ANNOTATION TOOL
+        <div className="flex-1 max-w-xl">
+          <h1 className="font-jetbrains font-bold text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-tight mb-4">
+            OrniNote
           </h1>
+          <p className="text-white/90 text-lg lg:text-xl font-inter leading-relaxed">
+            Precision annotation tools designed for ornithologists and bird researchers
+          </p>
         </div>
 
         {/* Right side - Form */}
-        <div className="flex-shrink-0 w-full max-w-md lg:max-w-lg xl:max-w-xl">
+        <div className="flex-shrink-0 w-full max-w-md lg:max-w-lg">
           <div className="relative">
-            <div className="absolute inset-0 bg-white bg-opacity-50 backdrop-blur-md rounded-3xl transform translate-x-4 translate-y-4 lg:translate-x-6 lg:translate-y-6"></div>
+            {/* Blurred background layer */}
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-2xl transform translate-x-3 translate-y-3"></div>
             
-            <div className="relative bg-white rounded-3xl p-6 lg:p-8 xl:p-12 shadow-2xl">
-              <h2 className="font-jetbrains font-bold text-ml-dark text-2xl lg:text-3xl xl:text-4xl mb-6 lg:mb-8">
-                Sign Up
-              </h2>
+            {/* Main form container */}
+            <div className="relative bg-white rounded-2xl p-8 lg:p-10 shadow-xl">
+              <div className="mb-8">
+                <h2 className="font-jetbrains font-bold text-gray-900 text-2xl lg:text-3xl mb-2">
+                  Create an account
+                </h2>
+                <p className="text-gray-500 text-sm font-inter">
+                  Get started with your annotation projects
+                </p>
+              </div>
 
+              {/* Error message */}
               {error && (
-                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+                <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-inter">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Username */}
                 <div className="relative">
-                  <label className="absolute -top-2 left-3 bg-white px-2 text-ml-gray font-jetbrains text-sm font-medium">
+                  <label className="absolute -top-2.5 left-3 bg-white px-2 text-gray-600 font-inter text-sm font-medium">
                     Username
                   </label>
                   <input
@@ -102,13 +113,13 @@ export default function Signup() {
                     minLength={3}
                     maxLength={30}
                     disabled={loading}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white font-inter text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                   />
                 </div>
 
                 {/* Email */}
                 <div className="relative">
-                  <label className="absolute -top-2 left-3 bg-white px-2 text-ml-gray font-jetbrains text-sm font-medium">
+                  <label className="absolute -top-2.5 left-3 bg-white px-2 text-gray-600 font-inter text-sm font-medium">
                     Email
                   </label>
                   <input
@@ -118,13 +129,13 @@ export default function Signup() {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white font-inter text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                   />
                 </div>
 
                 {/* Password */}
                 <div className="relative">
-                  <label className="absolute -top-2 left-3 bg-white px-2 text-ml-gray font-jetbrains text-sm font-medium">
+                  <label className="absolute -top-2.5 left-3 bg-white px-2 text-gray-600 font-inter text-sm font-medium">
                     Password
                   </label>
                   <input
@@ -135,13 +146,13 @@ export default function Signup() {
                     required
                     minLength={6}
                     disabled={loading}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white font-inter text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                   />
                 </div>
 
                 {/* Confirm Password */}
                 <div className="relative">
-                  <label className="absolute -top-2 left-3 bg-white px-2 text-ml-gray font-jetbrains text-sm font-medium">
+                  <label className="absolute -top-2.5 left-3 bg-white px-2 text-gray-600 font-inter text-sm font-medium">
                     Confirm Password
                   </label>
                   <input
@@ -151,7 +162,7 @@ export default function Signup() {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
-                    className="w-full h-12 lg:h-14 px-4 border border-ml-gray rounded-md bg-white font-jetbrains focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white font-inter text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                   />
                 </div>
 
@@ -159,21 +170,21 @@ export default function Signup() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 lg:h-14 bg-highlight text-white font-jetbrains font-extrabold text-xl lg:text-2xl rounded-md hover:bg-opacity-90 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 bg-highlight text-white font-inter font-semibold text-sm rounded-lg hover:bg-green-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Creating Account...' : 'Sign Up'}
+                  {loading ? 'Creating account...' : 'Create account'}
                 </button>
               </form>
 
               {/* Login Link */}
-              <div className="text-center mt-6">
-                <p className="text-ml-gray font-jetbrains text-sm">
+              <div className="text-center mt-8 pt-6 border-t border-gray-100">
+                <p className="text-gray-600 font-inter text-sm">
                   Already have an account?{" "}
                   <Link 
                     to="/login" 
-                    className="text-highlight hover:underline font-medium"
+                    className="text-highlight hover:text-green-700 font-semibold transition-colors"
                   >
-                    Sign in here
+                    Sign in
                   </Link>
                 </p>
               </div>
