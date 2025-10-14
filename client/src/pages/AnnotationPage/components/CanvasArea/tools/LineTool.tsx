@@ -33,6 +33,7 @@ export function useLineTool(onCreate: (annotation: Annotation) => void, imageId:
       id: crypto.randomUUID(),
       imageId,
       type: "line",
+      labelId: "",
       properties: {
         points: [start, { x, y }],
         style: { color, strokeWidth }

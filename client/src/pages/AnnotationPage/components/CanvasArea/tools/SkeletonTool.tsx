@@ -113,6 +113,7 @@ export function useSkeletonTool(
       id: crypto.randomUUID(),
       imageId,
       type: "skeleton",
+      labelId: "",
       properties: {
         skeletonPoints: points,
         skeletonEdges: edges,

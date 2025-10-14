@@ -24,6 +24,7 @@ export function usePenTool(
           id: crypto.randomUUID(),
           imageId,
           type: "polygon",
+          labelId: "",
           properties: {
             points: [...points, first], // close the shape
             style: { color, strokeWidth }

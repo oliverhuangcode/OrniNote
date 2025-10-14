@@ -37,6 +37,7 @@ export function useBrushTool(
       id: crypto.randomUUID(),
       imageId,
       type: "path",
+      labelId: "",
       properties: { points: points.slice(), style: { color, strokeWidth } },
     };
     onCreate(ann);

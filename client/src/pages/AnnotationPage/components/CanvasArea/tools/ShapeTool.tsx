@@ -65,6 +65,7 @@ export function useShapeTool(
         id: crypto.randomUUID(),
         imageId,
         type: "rectangle",
+        labelId: "",
         properties: {
           position: { x: x0, y: y0 },
           width: w,

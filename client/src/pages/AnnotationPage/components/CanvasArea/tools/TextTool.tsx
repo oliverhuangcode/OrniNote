@@ -28,6 +28,7 @@ export function useTextTool(
       id: crypto.randomUUID(),
       imageId,
       type: "text",
+      labelId: "",
       properties: {
         position: { x: textInputPos.x, y: textInputPos.y },
         text: trimmed,

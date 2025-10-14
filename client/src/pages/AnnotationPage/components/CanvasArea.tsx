@@ -328,6 +328,7 @@ export default function CanvasArea({
     (e: React.MouseEvent<SVGSVGElement>) => {
       if (!isDrawing) return;
       const { x, y } = toLocalPoint(e.clientX, e.clientY);
+      
       if (selectedTool === "line") lineTool.onMouseUp(x, y);
       else if (selectedTool === "rectangle" || selectedTool === "polygon") rectTool.onMouseUp(x, y);
       else if (selectedTool === "brush") brushTool.onMouseUp();
@@ -335,10 +336,18 @@ export default function CanvasArea({
         handleMarqueeSelection(x, y);
         return;
       }
+      else if (selectedTool === "move" && interaction) {
+        // Save the moved annotation to database using the existing onAnnotationCreated
+        const movedAnnotation = annotations.find(a => a.id === interaction.annId);
+        if (movedAnnotation && onAnnotationCreated) {
+          onAnnotationCreated(movedAnnotation);
+        }
+      }
+      
       setIsDrawing(false);
       setInteraction(null);
     },
-    [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, handleMarqueeSelection]
+    [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, handleMarqueeSelection, interaction, annotations, onAnnotationCreated]
   );
 
   const renderSelectionHandles = useCallback(() => {

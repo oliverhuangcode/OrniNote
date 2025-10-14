@@ -43,6 +43,9 @@ export interface Annotation {
   id: string;
   imageId: string;
   type: "rectangle" | "line" | "brush" | "text" | "polygon" | "path" | "skeleton";
+  labelId: string; // MOVE THIS from properties to root level
+  labelName?: string; // Optional, for display
+  createdBy?: string; // Optional, for display
   properties: {
     position?: Point; // for text or rectangle origin
     points?: Point[]; // for line/polyline/polygon
@@ -52,16 +55,10 @@ export interface Annotation {
     width?: number; // rectangle width
     height?: number; // rectangle height
     style?: Style;
-    className?: string; // class/category name
-    // Basic coordinates (used by some annotation types)
+    className?: string;
     x?: number;
     y?: number;
-    
-    // Legacy color property (kept for backward compatibility)
     color?: string;
-    labelId?: string;    
-    labelName?: string;   
-    createdBy?: string; 
   };
 }
 
@@ -71,4 +68,43 @@ export interface ImageData {
   imageFilename: string;
   imageWidth: number;
   imageHeight: number;
+}
+
+export interface Project {
+  _id: string;
+  name: string;
+  description: string;
+  owner: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  images: Array<{
+    _id: string;
+    filename: string;
+    url: string;
+    width: number;
+    height: number;
+    uploadedAt: string;
+  }>;
+  collaborators: Array<{
+    user: {
+      _id: string;
+      username: string;
+      email: string;
+    };
+    role: string;
+    addedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectData {
+  name: string;
+  width: number;
+  height: number;
+  imageUrl?: string;
+  imageFilename?: string;
+  teamMembers: string[];
 }
