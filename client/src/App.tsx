@@ -8,6 +8,8 @@ import AcceptInvite from './components/modals/AcceptInviteModal/AcceptInvite';
 import { AnnotationCanvas } from './pages/AnnotationPage/Annotation';
 import './styles/globals.css';
 
+import OAuthCallback from './pages/OnboardingPage/OAuthCallback';
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -17,6 +19,7 @@ const App: React.FC = () => {
           <Route path="/login" element={<Auth />} />
           <Route path="/signup" element={<Auth />} />
           <Route path="/accept-invite" element={<AcceptInvite />} />
+          <Route path="/auth/callback" element={<OAuthCallback />} />
           
           {/* Protected routes */}
           <Route

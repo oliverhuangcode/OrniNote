@@ -13,6 +13,9 @@ import labelRoutes from './routes/label.js';
 import liveblocksRoutes from './routes/liveblocks.js';
 import imageRoutes from './routes/image.js';
 
+import session from 'express-session';
+import passport from '../config/passport.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -34,6 +37,22 @@ app.use(cors({
     'X-Requested-With'
   ],
 }));
+
+// Session configuration (add after CORS, before routes)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));

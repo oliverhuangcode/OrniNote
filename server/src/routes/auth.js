@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../../models/users.js';
+import passport from 'passport';
 
 const router = express.Router();
 
@@ -187,5 +188,47 @@ router.get('/me', async (req, res) => {
     });
   }
 });
+
+// Google OAuth routes
+router.get('/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email']
+  })
+);
+
+router.get('/google/callback',
+  passport.authenticate('google', {
+    failureRedirect: 'http://localhost:3000/login?error=oauth_failed',
+    session: false
+  }),
+  (req, res) => {
+    // Generate JWT token for the authenticated user
+    const token = generateToken(req.user._id);
+    
+    // Redirect to frontend with token
+    res.redirect(`http://localhost:3000/auth/callback?token=${token}`);
+  }
+);
+
+// GitHub OAuth routes
+router.get('/github',
+  passport.authenticate('github', {
+    scope: ['user:email']
+  })
+);
+
+router.get('/github/callback',
+  passport.authenticate('github', {
+    failureRedirect: 'http://localhost:3000/login?error=oauth_failed',
+    session: false
+  }),
+  (req, res) => {
+    // Generate JWT token for the authenticated user
+    const token = generateToken(req.user._id);
+    
+    // Redirect to frontend with token
+    res.redirect(`http://localhost:3000/auth/callback?token=${token}`);
+  }
+);
 
 export default router;

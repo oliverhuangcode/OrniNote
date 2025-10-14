@@ -5,6 +5,8 @@ interface User {
   _id: string;
   username: string;
   email: string;
+  provider?: string;
+  profilePicture?: string;
 }
 
 interface AuthContextType {

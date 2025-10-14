@@ -22,10 +22,12 @@ export default function Index() {
 
   const handleGoogleSignup = () => {
     console.log("Google signup clicked");
+    window.location.href = 'http://localhost:5000/api/auth/google';
   };
 
   const handleGitHubSignup = () => {
     console.log("GitHub signup clicked");
+    window.location.href = 'http://localhost:5000/api/auth/github';
   };
 
   return (
