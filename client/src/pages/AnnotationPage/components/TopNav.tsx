@@ -133,28 +133,27 @@ export default function TopNav({
 
             {/* Edit Menu */}
             <Menu as="div" className="relative inline-block text-left">
-  <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
-    Edit
-  </MenuButton>
-  <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-    <MenuItem as="button"
-      className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
-      onClick={onUndo}
-      disabled={!canUndo}
-    >
-      Undo
-    </MenuItem>
-    <MenuItem as="button"
-      className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
-      onClick={onRedo}
-      disabled={!canRedo}
-    >
-      Redo
-    </MenuItem>
-    {/* ...the rest (Cut/Copy/Paste/Delete) */}
-  </MenuItems>
-</Menu>
-
+              <MenuButton className="font-inter text-base text-black hover:text-green-600 transition-colors">
+                Edit
+              </MenuButton>
+              <MenuItems className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                >
+                  Undo
+                </MenuItem>
+                <MenuItem as="button"
+                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100 disabled:opacity-40"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                >
+                  Redo
+                </MenuItem>
+                {/* ...the rest (Cut/Copy/Paste/Delete) */}
+              </MenuItems>
+            </Menu>
 
             {/* View Menu */}
             <Menu as="div" className="relative inline-block text-left">
