@@ -648,7 +648,7 @@ export default function Dashboard() {
       <div className="flex-1">
         {/* Header */}
         <div className="border-b border-gray-300 p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 min-h-[40px]">
             <h1 className="font-inter font-semibold text-xl text-gray-900">{getViewTitle()}</h1>
             {currentView !== "deleted" && (
               <button
@@ -752,7 +752,7 @@ export default function Dashboard() {
         <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-gray-500">Loading projects...</div>
+              <div className="text-gray-500 text-sm">Loading projects...</div>
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12">
