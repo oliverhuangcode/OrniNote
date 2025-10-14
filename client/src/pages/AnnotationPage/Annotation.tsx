@@ -28,6 +28,7 @@ import ShareProject from "../../components/modals/ShareProjectModal/ShareProject
 import Export from "../../components/modals/ExportModal/Export";
 import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
 import OpenProject from "../../components/modals/OpenProjectModal/OpenProject";
+import Help from "../../components/modals/HelpModal/Help";
 import LeftToolbar from "./components/LeftToolbar";
 import CanvasArea from "./components/CanvasArea";
 import LabelPanel from "./components/LabelPanel";
@@ -139,6 +140,7 @@ export default function Annotation() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showOpenModal, setShowOpenModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [selectedTool, setSelectedTool] = useState("move");
   const [canvasZoom, setCanvasZoom] = useState(100);
@@ -1058,6 +1060,7 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
         onShowExportModal={() => setShowExportModal(true)}
         onShowCreateModal={() => setShowCreateModal(true)}
         onShowOpenModal={() => setShowOpenModal(true)}
+        onShowHelpModal={() => setShowHelpModal(true)}
         onCanvasZoom={handleCanvasZoom}
         onShowGrid={handleGrid}
         showGrid={showGrid}
@@ -1175,6 +1178,10 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
         onClose={() => setShowManageLabelsModal(false)}
         projectId={project._id}
         onLabelsChanged={handleLabelsChanged}
+      />
+      <Help
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
       />
 
       {/* Upload Loading Indicator */}

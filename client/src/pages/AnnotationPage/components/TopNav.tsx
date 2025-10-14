@@ -15,6 +15,7 @@ interface TopNavProps {
   onShowExportModal: () => void;
   onShowCreateModal: () => void;
   onShowOpenModal: () => void;
+  onShowHelpModal: () => void;
   onCanvasZoom: (direction: "in" | "out" | "reset") => void;
   onShowGrid: () => void;
   showGrid: boolean;
@@ -44,6 +45,7 @@ export default function TopNav({
   onShowExportModal,
   onShowCreateModal,
   onShowOpenModal,
+  onShowHelpModal,
   onCanvasZoom,
   onShowGrid,
   showGrid,
@@ -52,8 +54,8 @@ export default function TopNav({
   onAddImage,
   others,
   cursorColors,
-  currentUser, // ADD THIS
-  onSignOut, // ADD THIS
+  currentUser, 
+  onSignOut, 
   onUndo,
   onRedo,
   canUndo,
@@ -207,7 +209,7 @@ export default function TopNav({
             </button>
             <button
               className="font-inter text-base text-black hover:text-green-600 transition-colors"
-              onClick={() => console.log("Help menu")}
+              onClick={onShowHelpModal}
             >
               Help
             </button>
