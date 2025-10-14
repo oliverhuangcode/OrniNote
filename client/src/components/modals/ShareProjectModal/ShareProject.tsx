@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { getAuthHeaders } from "../../../utils/apiHelper";
+import { createPortal } from "react-dom";
 
 interface ShareProjectProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   // Close on ESC key
   useEffect(() => {
@@ -44,17 +46,27 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Close on outside click
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+    const handleClick = (e: MouseEvent) => {
+      const clickedElement = e.target as Element;
+      const isDropdown = clickedElement.closest('[data-dropdown]');
+      const isDropdownButton = clickedElement.closest('[data-dropdown-button]');
+      const isModal = modalRef.current?.contains(clickedElement);
+      
+      // Handle dropdown clicks
+      if (!isDropdown && !isDropdownButton) {
+        setOpenDropdownId(null);
+      }
+      
+      // Handle modal close (only if clicking outside modal AND not on dropdown)
+      if (!isModal && !isDropdown && !isDropdownButton) {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
     }
   }, [isOpen, onClose]);
 
@@ -339,9 +351,15 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
                   ) : (
                     <div className="relative">
                       <button
-                        onClick={() =>
-                          setOpenDropdownId(openDropdownId === member.id ? null : member.id)
-                        }
+                        data-dropdown-button="true" // Add this
+                        onClick={(e) => {
+                          const buttonRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setDropdownPosition({
+                            top: buttonRect.bottom + window.scrollY + 4,
+                            left: buttonRect.left + window.scrollX,
+                          });
+                          setOpenDropdownId(openDropdownId === member.id ? null : member.id);
+                        }}
                         className="flex items-center justify-between px-3 py-1.5 gap-2 text-sm bg-white border border-gray-300 rounded-lg font-inter text-gray-700 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
                       >
                         <span>{member.role}</span>
@@ -364,22 +382,32 @@ export default function ShareProject({ isOpen, onClose, projectId, projectName}:
                         </svg>
                       </button>
 
-                      {openDropdownId === member.id && (
-                        <div className="absolute top-full right-0 mt-1 text-sm bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
-                          {RoleOptions.map((role) => (
-                            <button
-                              key={role}
-                              onClick={() => {
-                                handleRoleChange(member.id, role as "Editor" | "Viewer");
-                                setOpenDropdownId(null);
-                              }}
-                              className="w-full px-3 py-2 text-left font-inter text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors"
-                            >
-                              {role}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      {openDropdownId === member.id &&
+                        createPortal(
+                          <div
+                            data-dropdown="true"
+                            className="fixed text-sm bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] min-w-[120px]"
+                            style={{
+                              top: dropdownPosition.top,
+                              left: dropdownPosition.left,
+                            }}
+                          >
+                            {RoleOptions.map((role) => (
+                              <button
+                                key={role}
+                                onClick={() => {
+                                  handleRoleChange(member.id, role as "Editor" | "Viewer");
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left font-inter text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                {role}
+                              </button>
+                            ))}
+                          </div>,
+                          document.body
+                        )}
+
                     </div>
                   )}
                 </div>
