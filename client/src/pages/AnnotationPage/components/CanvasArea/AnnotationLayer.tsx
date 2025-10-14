@@ -47,15 +47,25 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
 }) => {
   const renderAnnotation = (a: Annotation) => {
     switch (a.type) {
-      case "text":
+      case "text": {
+        // Make the (rendered) text selectable via group wrapper below.
         return <TextAnnotation key={a.id} annotation={a} />;
-      
-      case "line":
-        return <LineAnnotation key={a.id} annotation={a} />;
-      
-      case "rectangle":
+      }
+
+      case "line": {
+        // If your <LineAnnotation> draws a <line> or <polyline>,
+        // ensure pointerEvents gets passed through (stroke hit).
+        return (
+          <g key={a.id} pointerEvents="stroke" style={{ cursor: "move" }}>
+            <LineAnnotation annotation={a} />
+          </g>
+        );
+      }
+
+      case "rectangle": {
         if (!a.properties.position) return null;
-        const rectColor = a.properties.style?.color || a.properties.color || "#13ba83";
+        const rectColor =
+          a.properties.style?.color || a.properties.color || "#13ba83";
         const rectFill = lighten(rectColor, 0.3) + "55";
         return (
           <rect
@@ -67,17 +77,29 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
             fill={rectFill}
             stroke={rectColor}
             strokeWidth={a.properties.style?.strokeWidth || 2}
+            pointerEvents="all"
+            cursor="move"
           />
         );
-      
-      case "path":
-        return <PathAnnotation key={a.id} annotation={a} />;
-      
-      case "brush":
+      }
+
+      case "path": {
+        // Wrap PathAnnotation to guarantee stroke hit-test.
+        return (
+          <g key={a.id} pointerEvents="stroke" style={{ cursor: "move" }}>
+            <PathAnnotation annotation={a} />
+          </g>
+        );
+      }
+
+      case "brush": {
         if (!a.properties.points || a.properties.points.length === 0) return null;
-        const brushColor = a.properties.style?.color || a.properties.color || "#13ba83";
+        const brushColor =
+          a.properties.style?.color || a.properties.color || "#13ba83";
         const pathData = a.properties.points.reduce((path, point, index) => {
-          return index === 0 ? `M ${point.x} ${point.y}` : `${path} L ${point.x} ${point.y}`;
+          return index === 0
+            ? `M ${point.x} ${point.y}`
+            : `${path} L ${point.x} ${point.y}`;
         }, "");
         return (
           <path
@@ -88,17 +110,23 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
             strokeWidth={a.properties.style?.strokeWidth || 3}
             strokeLinecap="round"
             strokeLinejoin="round"
+            pointerEvents="stroke"
+            cursor="move"
           />
         );
-      
-      case "polygon":
+      }
+
+      case "polygon": {
         if (!a.properties.points) return null;
-        const polygonColor = a.properties.style?.color || a.properties.color || "#13ba83";
+        const polygonColor =
+          a.properties.style?.color || a.properties.color || "#13ba83";
         const polygonFill = lighten(polygonColor, 0.3) + "55";
         return (
           <polygon
             key={a.id}
-            points={a.properties.points.map((p: { x: number; y: number }) => `${p.x},${p.y}`).join(" ")}
+            points={a.properties.points
+              .map((p: { x: number; y: number }) => `${p.x},${p.y}`)
+              .join(" ")}
             fill={polygonFill}
             stroke={polygonColor}
             strokeWidth={a.properties.style?.strokeWidth || 2}
@@ -106,7 +134,8 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
             cursor="move"
           />
         );
-      
+      }
+
       default:
         return null;
     }
@@ -116,9 +145,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
     if (imageUrl) {
       return (
         <g>
-          {/* Background for the image area */}
           <rect width="100%" height="100%" fill="#f9fafb" />
-          
           {!imageError ? (
             <image
               href={imageUrl}
@@ -132,7 +159,6 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
             />
           ) : (
             <g>
-              {/* Error state */}
               <rect
                 width="100%"
                 height="100%"
@@ -169,57 +195,57 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
                 fontSize="12"
                 fontFamily="system-ui, sans-serif"
               >
-                {imageName || 'Unknown file'}
+                {imageName || "Unknown file"}
               </text>
             </g>
           )}
         </g>
       );
-    } else {
-      // No image placeholder
-      return (
-        <g>
-          <rect
-            width="100%"
-            height="100%"
-            fill="#f9fafb"
-            stroke="#d1d5db"
-            strokeWidth={2}
-            strokeDasharray="8 4"
-          />
-          <text
-            x="50%"
-            y="42%"
-            textAnchor="middle"
-            fill="#6b7280"
-            fontSize="24"
-            fontFamily="system-ui, sans-serif"
-          >
-            📷
-          </text>
-          <text
-            x="50%"
-            y="50%"
-            textAnchor="middle"
-            fill="#6b7280"
-            fontSize="14"
-            fontFamily="system-ui, sans-serif"
-          >
-            No image available
-          </text>
-          <text
-            x="50%"
-            y="55%"
-            textAnchor="middle"
-            fill="#9ca3af"
-            fontSize="12"
-            fontFamily="system-ui, sans-serif"
-          >
-            Upload an image to start annotating
-          </text>
-        </g>
-      );
     }
+
+    // No image placeholder
+    return (
+      <g>
+        <rect
+          width="100%"
+          height="100%"
+          fill="#f9fafb"
+          stroke="#d1d5db"
+          strokeWidth={2}
+          strokeDasharray="8 4"
+        />
+        <text
+          x="50%"
+          y="42%"
+          textAnchor="middle"
+          fill="#6b7280"
+          fontSize="24"
+          fontFamily="system-ui, sans-serif"
+        >
+          📷
+        </text>
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          fill="#6b7280"
+          fontSize="14"
+          fontFamily="system-ui, sans-serif"
+        >
+          No image available
+        </text>
+        <text
+          x="50%"
+          y="55%"
+          textAnchor="middle"
+          fill="#9ca3af"
+          fontSize="12"
+          fontFamily="system-ui, sans-serif"
+        >
+          Upload an image to start annotating
+        </text>
+      </g>
+    );
   };
 
   return (
@@ -232,20 +258,17 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
-      {/* Background image or placeholder */}
       {renderBackground()}
-      
-      {/* Render all annotations */}
-      {annotations.map(a => (
+
+      {/* Each annotation is wrapped in a <g> that carries data-ann-id for hit-testing. */}
+      {annotations.map((a) => (
         <g key={a.id} data-ann-id={a.id}>
           {renderAnnotation(a)}
         </g>
       ))}
-      
-      {/* Tool previews and selection handles (passed as children from CanvasArea) */}
+
       {children}
-      
-      {/* Marquee selection rectangle */}
+
       {marqueeRect && (
         <rect
           x={marqueeRect.x}

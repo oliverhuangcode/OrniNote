@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   LiveblocksProvider,
@@ -173,6 +173,34 @@ export default function Annotation() {
   const [showManageLabelsModal, setShowManageLabelsModal] = useState(false);
   const [undoStack, setUndoStack] = useState<AnnotationType[][]>([]);
   const [redoStack, setRedoStack] = useState<AnnotationType[][]>([]);
+
+  // ---- history batching (one undo per drag) ----
+const [historySuspended, setHistorySuspended] = useState(false);
+const historySnapshotRef = useRef<AnnotationType[] | null>(null);
+
+const beginAtomicChange = useCallback(() => {
+  // take a snapshot only when entering "suspended"
+  if (!historySuspended) {
+    historySnapshotRef.current = annotations; // snapshot BEFORE the drag starts
+    setHistorySuspended(true);
+  }
+}, [historySuspended, annotations]);
+
+const endAtomicChange = useCallback(() => {
+  if (!historySuspended) return;
+  setHistorySuspended(false);
+
+  // if changed during the drag, push the single snapshot
+  if (
+    historySnapshotRef.current &&
+    JSON.stringify(historySnapshotRef.current) !== JSON.stringify(annotations)
+  ) {
+    setUndoStack((u) => [...u, historySnapshotRef.current!]);
+    setRedoStack([]);
+  }
+  historySnapshotRef.current = null;
+}, [historySuspended, annotations, setUndoStack, setRedoStack]);
+
 
   // Load project data on mount
   useEffect(() => {
@@ -777,30 +805,30 @@ export default function Annotation() {
   };
 
   // Full React-style setter with undo/redo tracking
-const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> = (value) => {
-  console.log('[updateAnnotations] called', typeof value);
+const updateAnnotations = useCallback<
+  React.Dispatch<React.SetStateAction<AnnotationType[]>>
+>((value) => {
   if (typeof value === "function") {
-    // callback form
-    setAnnotations(prev => {
-      const next = (value as (prev: AnnotationType[]) => AnnotationType[])(prev);
-      if (JSON.stringify(prev) !== JSON.stringify(next)) {
+    setAnnotations((prev) => {
+      const next = (value as (p: AnnotationType[]) => AnnotationType[])(prev);
+      if (!historySuspended && JSON.stringify(prev) !== JSON.stringify(next)) {
         setUndoStack((u) => [...u, prev]);
         setRedoStack([]);
       }
       return next;
     });
   } else {
-    // direct array form
-    setAnnotations(prev => {
+    setAnnotations((prev) => {
       const next = value as AnnotationType[];
-      if (JSON.stringify(prev) !== JSON.stringify(next)) {
+      if (!historySuspended && JSON.stringify(prev) !== JSON.stringify(next)) {
         setUndoStack((u) => [...u, prev]);
         setRedoStack([]);
       }
       return next;
     });
   }
-};
+}, [historySuspended]);
+
 
 
   useEffect(() => {
@@ -1073,6 +1101,8 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
           projectImage={activeFile}
           onAnnotationCreated={saveAnnotationToDatabase}
           showGrid={showGrid}
+          beginAtomicChange={beginAtomicChange}
+  endAtomicChange={endAtomicChange}
         />
         <LabelPanel
           labels={labels}
