@@ -511,7 +511,7 @@ export default function Dashboard() {
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
             <Link to={`/annotation/${project.id}`}>
-              <h3 className="font-semibold text-gray-900 text-lg truncate pr-2 hover:text-blue-600">
+              <h3 className="font-semibold text-gray-900 text-base truncate pr-2 hover:text-blue-600 transition-colors">
                 {project.name}
               </h3>
             </Link>
@@ -530,7 +530,7 @@ export default function Dashboard() {
             </div>
           )}
           </div>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-xs">
             {project.isShared && project.sharedBy ? `Shared by ${project.sharedBy}` : project.lastEdited}
           </p>
         </div>
@@ -598,10 +598,10 @@ export default function Dashboard() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-200 rounded-lg px-4 py-3 pl-12 font-inter text-xl text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full bg-gray-100 rounded-lg px-4 py-2.5 pl-10 font-inter text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-colors"
             />
-            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-              <path d="M22.75 22.75L18.0375 18.0375M20.5833 11.9167C20.5833 16.7031 16.7031 20.5833 11.9167 20.5833C7.1302 20.5833 3.25 16.7031 3.25 11.9167C3.25 7.1302 7.1302 3.25 11.9167 3.25C16.7031 3.25 20.5833 7.1302 20.5833 11.9167Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <path d="M17.5 17.5L14.5834 14.5834M16.6667 9.58333C16.6667 13.4954 13.4954 16.6667 9.58333 16.6667C5.67132 16.6667 2.5 13.4954 2.5 9.58333C2.5 5.67132 5.67132 2.5 9.58333 2.5C13.4954 2.5 16.6667 5.67132 16.6667 9.58333Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
         </div>
@@ -613,10 +613,10 @@ export default function Dashboard() {
             className={`w-full px-6 py-3 ${currentView === "home" ? "bg-gray-200" : "hover:bg-gray-100"} transition-colors`}
           >
             <div className="flex items-center gap-3">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-black">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-gray-700">
                 <path d="M9 22V12H15V22M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="font-inter text-base text-black">Home</span>
+              <span className="font-inter text-sm font-medium text-gray-900">Home</span>
             </div>
           </button>
           <button
@@ -624,10 +624,10 @@ export default function Dashboard() {
             className={`w-full px-6 py-3 ${currentView === "shared" ? "bg-gray-200" : "hover:bg-gray-100"} transition-colors`}
           >
             <div className="flex items-center gap-3">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-black">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-gray-700">
                 <path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49M21 5C21 6.65685 19.6569 8 18 8C16.3431 8 15 6.65685 15 5C15 3.34315 16.3431 2 18 2C19.6569 2 21 3.34315 21 5ZM9 12C9 13.6569 7.65685 15 6 15C4.34315 15 3 13.6569 3 12C3 10.3431 4.34315 9 6 9C7.65685 9 9 10.3431 9 12ZM21 19C21 20.6569 19.6569 22 18 22C16.3431 22 15 20.6569 15 19C15 17.3431 16.3431 16 18 16C19.6569 16 21 17.3431 21 19Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="font-inter text-base text-black">Shared with you</span>
+              <span className="font-inter text-sm font-medium text-gray-900">Shared with you</span>
             </div>
           </button>
           <button
@@ -635,10 +635,10 @@ export default function Dashboard() {
             className={`w-full px-6 py-3 ${currentView === "deleted" ? "bg-gray-200" : "hover:bg-gray-100"} transition-colors`}
           >
             <div className="flex items-center gap-3">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-black">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-gray-700">
                 <path d="M3 6H5M5 6H21M5 6V20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M10 11V17M14 11V17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="font-inter text-base text-black">Deleted</span>
+              <span className="font-inter text-sm font-medium text-gray-900">Deleted</span>
             </div>
           </button>
         </nav>
@@ -649,14 +649,14 @@ export default function Dashboard() {
         {/* Header */}
         <div className="border-b border-gray-300 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="font-inter font-medium text-2xl text-black">{getViewTitle()}</h1>
+            <h1 className="font-inter font-semibold text-xl text-gray-900">{getViewTitle()}</h1>
             {currentView !== "deleted" && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-lg font-inter font-medium hover:bg-green-700 transition-colors"
+                className="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-lg font-inter font-medium text-sm hover:bg-green-700 transition-colors shadow-sm"
               >
-                <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-                  <path d="M8.50008 3.54169V13.4584M3.54175 8.50002H13.4584" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 3.33334V12.6667M3.33333 8H12.6667" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 Create
               </button>
@@ -674,7 +674,7 @@ export default function Dashboard() {
                     e.stopPropagation();
                     setShowSortDropdown(!showSortDropdown);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <span className="font-inter text-sm font-medium text-gray-900">{sortBy}</span>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-500">
@@ -708,7 +708,7 @@ export default function Dashboard() {
               {/* Ascending/Descending Toggle */}
               <button
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                className="p-2 bg-white border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors group"
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                 title={sortOrder === "asc" ? "Ascending" : "Descending"}
               >
                 {sortOrder === "desc" ? (
@@ -756,13 +756,13 @@ export default function Dashboard() {
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-500 mb-4">
+              <div className="text-gray-500 text-sm mb-4">
                 {searchQuery ? "No projects found matching your search." : "No projects yet."}
               </div>
               {!searchQuery && currentView === "home" && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all duration-200"
+                  className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-all duration-200 shadow-sm"
                 >
                   Create your first project
                 </button>
