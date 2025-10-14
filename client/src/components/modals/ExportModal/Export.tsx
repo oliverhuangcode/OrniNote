@@ -115,6 +115,7 @@ export default function Export({ isOpen, onClose, projectData }: ExportProps) {
 const generateXML = (data: any) => {
   const indent = (level: number, text: string) => '  '.repeat(level) + text;
 
+  // Helper renderers 
   const renderStyle = (style: any, level = 2) => {
     if (!style) return '';
     const attrs = Object.entries(style)
@@ -124,13 +125,31 @@ const generateXML = (data: any) => {
   };
 
   const renderPoints = (points: any[], level = 2) => {
-    if (!points || !Array.isArray(points)) return '';
+    if (!points || points.length === 0) return '';
     return (
       indent(level, `<points>`) +
       '\n' +
-      points.map(p => indent(level + 1, `<point x="${p.x}" y="${p.y}" />`)).join('\n') +
+      points.map(p => {
+        const attrs = `x="${p.x}" y="${p.y}"` +
+          (p.labelName ? ` labelName="${p.labelName}"` : '') +
+          (p.color ? ` color="${p.color}"` : '');
+        return indent(level + 1, `<point ${attrs} />`);
+      }).join('\n') +
       '\n' +
       indent(level, `</points>`)
+    );
+  };
+
+  const renderEdges = (edges: any[], level = 2) => {
+    if (!edges || edges.length === 0) return '';
+    return (
+      indent(level, `<edges>`) +
+      '\n' +
+      edges.map(e =>
+        indent(level + 1, `<edge from="${e.from}" to="${e.to}" labelName="${e.labelName}" color="${e.color}" />`)
+      ).join('\n') +
+      '\n' +
+      indent(level, `</edges>`)
     );
   };
 
@@ -149,30 +168,32 @@ const generateXML = (data: any) => {
     return indent(level, `<text>${text}</text>`);
   };
 
+  // Annotation renderer
   const renderAnnotation = (ann: any, level = 3) => {
-    const lines = [];
-    lines.push(indent(level, `<annotation label="${ann.label}" type="${ann.type}">`));
+    const lines = [indent(level, `<annotation label="${ann.label}" type="${ann.type}">`)];
+    const sd = ann.shapeData || {};
 
     switch (ann.type) {
       case 'rectangle':
-        lines.push(renderPosition(ann.shapeData.position, level + 1));
-        lines.push(renderSize(ann.shapeData.width, ann.shapeData.height, level + 1));
+        lines.push(renderPosition(sd.position, level + 1));
+        lines.push(renderSize(sd.width, sd.height, level + 1));
         break;
-      case 'line':
-      case 'path':
-        lines.push(renderPoints(ann.shapeData.points, level + 1));
-        break;
+
       case 'text':
-        lines.push(renderPosition(ann.shapeData.position, level + 1));
-        lines.push(renderText(ann.shapeData.text, level + 1));
+        lines.push(renderPosition(sd.position, level + 1));
+        lines.push(renderText(sd.text, level + 1));
         break;
-      default:
-        if (ann.shapeData.points) lines.push(renderPoints(ann.shapeData.points, level + 1));
-        if (ann.shapeData.position) lines.push(renderPosition(ann.shapeData.position, level + 1));
-        if (ann.shapeData.text) lines.push(renderText(ann.shapeData.text, level + 1));
+
+      case 'skeleton':
+        lines.push(renderPoints(sd.skeletonPoints, level + 1));
+        lines.push(renderEdges(sd.skeletonEdges, level + 1));
+        break;
+
+      default: // line, path, polygon, etc.
+        if (sd.points) lines.push(renderPoints(sd.points, level + 1));
     }
 
-    lines.push(renderStyle(ann.shapeData.style, level + 1));
+    lines.push(renderStyle(sd.style, level + 1));
     lines.push(indent(level, `</annotation>`));
     return lines.join('\n');
   };
@@ -205,22 +226,67 @@ const generateTXT = (data: any) => {
       output += `    Label: ${ann.label}\n`;
       output += `    Type: ${ann.type}\n`;
 
-      if (ann.type === "rectangle") {
-        output += `    Position: x=${ann.shapeData.position.x}, y=${ann.shapeData.position.y}\n`;
-        output += `    Size: width=${ann.shapeData.width}, height=${ann.shapeData.height}\n`;
-      } else if (ann.type === "line" || ann.type === "path") {
-        output += "    Points:\n";
-        ann.shapeData.points.forEach((p: any, i: number) => {
-          output += `      ${i + 1}: x=${p.x}, y=${p.y}\n`;
-        });
-      } else if (ann.type === "text") {
-        output += `    Position: x=${ann.shapeData.position.x}, y=${ann.shapeData.position.y}\n`;
-        output += `    Text: ${ann.shapeData.text}\n`;
+      const sd = ann.shapeData || {};
+
+      switch (ann.type) {
+        case "rectangle":
+          if (sd.position) {
+            output += `    Position: x=${sd.position.x}, y=${sd.position.y}\n`;
+          }
+          output += `    Size: width=${sd.width}, height=${sd.height}\n`;
+          break;
+
+        case "text":
+          if (sd.position) {
+            output += `    Position: x=${sd.position.x}, y=${sd.position.y}\n`;
+          }
+          output += `    Text: ${sd.text}\n`;
+          break;
+
+        case "line":
+        case "path":
+        case "polygon":
+          if (sd.points && sd.points.length > 0) {
+            output += `    Points:\n`;
+            sd.points.forEach((p: any, i: number) => {
+              output += `      ${i + 1}: x=${p.x}, y=${p.y}`;
+              if (p.labelName) output += `, labelName=${p.labelName}`;
+              if (p.color) output += `, color=${p.color}`;
+              output += `\n`;
+            });
+          }
+          break;
+
+        case "skeleton":
+          if (sd.skeletonPoints && sd.skeletonPoints.length > 0) {
+            output += `    Skeleton Points:\n`;
+            sd.skeletonPoints.forEach((p: any, i: number) => {
+              output += `      ${i + 1}: x=${p.x}, y=${p.y}, labelName=${p.labelName}, color=${p.color}\n`;
+            });
+          }
+          if (sd.skeletonEdges && sd.skeletonEdges.length > 0) {
+            output += `    Skeleton Edges:\n`;
+            sd.skeletonEdges.forEach((e: any, i: number) => {
+              output += `      ${i + 1}: from=${e.from}, to=${e.to}, labelName=${e.labelName}, color=${e.color}\n`;
+            });
+          }
+          break;
+
+        default:
+          // fallback for any other type
+          if (sd.points && sd.points.length > 0) {
+            output += `    Points:\n`;
+            sd.points.forEach((p: any, i: number) => {
+              output += `      ${i + 1}: x=${p.x}, y=${p.y}\n`;
+            });
+          }
       }
 
-      if (ann.shapeData.style) {
-        output += `    Style: color=${ann.shapeData.style.color}, strokeWidth=${ann.shapeData.style.strokeWidth}\n`;
+      // Style (common for all)
+      if (sd.style) {
+        output += `    Style: color=${sd.style.color}, strokeWidth=${sd.style.strokeWidth}\n`;
       }
+
       output += `\n`;
     });
   });

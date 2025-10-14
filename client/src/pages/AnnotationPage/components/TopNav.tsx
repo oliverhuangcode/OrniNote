@@ -112,13 +112,6 @@ export default function TopNav({
                 <MenuItem
                   as="button"
                   className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
-                  onClick={() => console.log("Save")}
-                >
-                  Save
-                </MenuItem>
-                <MenuItem
-                  as="button"
-                  className="w-full px-4 py-2 text-left text-sm font-inter data-[focus]:bg-gray-100"
                   onClick={onShowExportModal}
                 >
                   Export
