@@ -95,10 +95,28 @@ export default function Export({ isOpen, onClose, projectData }: ExportProps) {
   const generateExportData = () => {
     if (!projectData) return "";
 
-    const exportData = {
-      project: `${projectData.name || "untitled"}`,
-      annotations: getFilteredAnnotations(),
-    };
+  // Create a clean exportData with labelId removed from skeleton points and edges
+  const exportData = {
+    project: projectData.name || "untitled",
+    annotations: getFilteredAnnotations().map((img: any) => ({
+      ...img,
+      annotations: img.annotations.map((ann: any) => {
+        const sd = ann.shapeData || {};
+
+        const cleanShapeData = {
+          ...sd,
+          skeletonPoints: sd.skeletonPoints
+            ? sd.skeletonPoints.map(({ labelId, ...p }: { labelId?: string; [key: string]: any }) => p)
+            : undefined,
+          skeletonEdges: sd.skeletonEdges
+            ? sd.skeletonEdges.map(({ labelId, ...e }: { labelId?: string; [key: string]: any }) => e)
+            : undefined,
+        };
+
+        return { ...ann, shapeData: cleanShapeData };
+      }),
+    })),
+  };
 
     switch (selectedFormat) {
       case "JSON":
