@@ -43,6 +43,7 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortType>("Recent");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc"); // Add sort order state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -324,18 +325,52 @@ export default function Dashboard() {
       project.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
+      let comparison = 0;
+      
       switch (sortBy) {
         case "Name":
-          return a.name.localeCompare(b.name);
+          comparison = a.name.localeCompare(b.name);
+          break;
         case "Date Modified":
-          // Parse the lastEdited strings to compare properly
-          const timeA = new Date(a.lastEdited.replace('Edited ', '').replace(' ago', '')).getTime() || 0;
-          const timeB = new Date(b.lastEdited.replace('Edited ', '').replace(' ago', '')).getTime() || 0;
-          return timeB - timeA; // Most recent first
         case "Recent":
+          // Extract timestamps from lastEdited string or use current time as fallback
+          const getTimestamp = (lastEdited: string) => {
+            // Try to parse "Edited X ago" format
+            const now = Date.now();
+            if (lastEdited.includes('just now')) return now;
+            if (lastEdited.includes('minute')) {
+              const mins = parseInt(lastEdited.match(/\d+/)?.[0] || '0');
+              return now - (mins * 60 * 1000);
+            }
+            if (lastEdited.includes('hour')) {
+              const hours = parseInt(lastEdited.match(/\d+/)?.[0] || '0');
+              return now - (hours * 60 * 60 * 1000);
+            }
+            if (lastEdited.includes('day')) {
+              const days = parseInt(lastEdited.match(/\d+/)?.[0] || '0');
+              return now - (days * 24 * 60 * 60 * 1000);
+            }
+            if (lastEdited.includes('week')) {
+              const weeks = parseInt(lastEdited.match(/\d+/)?.[0] || '0');
+              return now - (weeks * 7 * 24 * 60 * 60 * 1000);
+            }
+            if (lastEdited.includes('month')) {
+              const months = parseInt(lastEdited.match(/\d+/)?.[0] || '0');
+              return now - (months * 30 * 24 * 60 * 60 * 1000);
+            }
+            return now; // Default to now if can't parse
+          };
+          
+          const timeA = getTimestamp(a.lastEdited);
+          const timeB = getTimestamp(b.lastEdited);
+          comparison = timeB - timeA; // Most recent first by default
+          break;
         default:
-          return 0; // Keep original order for recent
+          return 0;
       }
+      
+      // Apply sort order
+      return sortOrder === "asc" ? comparison : -comparison;
     });
 
   const getViewTitle = () => {
@@ -629,46 +664,63 @@ export default function Dashboard() {
           </div>
 
           {/* Sort Options */}
-          <div className="flex items-center gap-6">
-            <span className="font-inter text-xl text-gray-500">Sort</span>
-            <div className="flex items-center gap-2 relative">
+          <div className="flex items-center gap-4">
+            <span className="font-inter text-sm font-medium text-gray-500">Sort by</span>
+            <div className="flex items-center gap-2">
+              {/* Sort Type Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSortDropdown(!showSortDropdown);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                >
+                  <span className="font-inter text-sm font-medium text-gray-900">{sortBy}</span>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-500">
+                    <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+
+                {/* Sort Dropdown */}
+                {showSortDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    {(["Recent", "Name", "Date Modified"] as SortType[]).map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => {
+                          setSortBy(option);
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left font-inter text-sm transition-colors ${
+                          sortBy === option 
+                            ? "bg-green-50 text-green-700 font-medium" 
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Ascending/Descending Toggle */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowSortDropdown(!showSortDropdown);
-                }}
-                className="flex items-center gap-2 hover:bg-gray-50 px-2 py-1 rounded transition-colors"
+                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                className="p-2 bg-white border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors group"
+                title={sortOrder === "asc" ? "Ascending" : "Descending"}
               >
-                <span className="font-inter text-xl text-black">{sortBy}</span>
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="text-black">
-                  <path d="M5.5 8.25L11 13.75L16.5 8.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                {sortOrder === "desc" ? (
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="text-gray-700">
+                    <path d="M9 3.75V14.25M9 14.25L13.5 9.75M9 14.25L4.5 9.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="text-gray-700">
+                    <path d="M9 14.25V3.75M9 3.75L4.5 8.25M9 3.75L13.5 8.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
               </button>
-
-              {/* Sort Dropdown */}
-              {showSortDropdown && (
-                <div className="absolute top-8 left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  {(["Recent", "Name", "Date Modified"] as SortType[]).map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        setSortBy(option);
-                        setShowSortDropdown(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left font-inter text-base hover:bg-gray-50 ${
-                        sortBy === option ? "bg-green-50 text-green-600" : "text-gray-700"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="w-8 h-px bg-gray-500 mx-2"></div>
-              <svg width="19" height="19" viewBox="0 0 19 19" fill="none" className="text-black">
-                <path d="M9.49992 3.95831V15.0416M9.49992 15.0416L15.0416 9.49998M9.49992 15.0416L3.95825 9.49998" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
             </div>
           </div>
         </div>
