@@ -18,9 +18,8 @@ import {
   Minus,
   Brush,
   Type,
-  Pipette,
-  Wand2,
-  Pen,
+  GitBranch,
+  Hexagon
 } from "lucide-react";
 import { projectService } from "../../services/projectService";
 import type { Annotation as AnnotationType } from "./types";
@@ -930,7 +929,7 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
       id: "skeleton",
       isSelected: selectedTool === "skeleton",
       icon: (
-        <Wand2
+        <GitBranch
           className={selectedTool === "skeleton" ? "text-white" : "text-black"}
           strokeWidth={2.5}
           size={28}
@@ -951,30 +950,16 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
       label: "Textbox",
     },
     {
-      id: "eyedropper",
-      isSelected: selectedTool === "eyedropper",
-      icon: (
-        <Pipette
-          className={
-            selectedTool === "eyedropper" ? "text-white" : "text-black"
-          }
-          strokeWidth={2.5}
-          size={28}
-        />
-      ),
-      label: "Eyedropper",
-    },
-    {
       id: "pen",
       isSelected: selectedTool === "pen",
       icon: (
-        <Pen
+        <Hexagon
           className={selectedTool === "pen" ? "text-white" : "text-black"}
           strokeWidth={2.5}
           size={28}
         />
       ),
-      label: "Pen",
+      label: "Polygon",
     },
   ];
 
