@@ -149,12 +149,15 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
         })
       );
 
-      // Set the first image's dimensions as project dimensions
+      // Set project dimensions to the largest width and height across all images
       if (imageDataArray.length > 0) {
+        const maxWidth = Math.max(...imageDataArray.map(img => img.width));
+        const maxHeight = Math.max(...imageDataArray.map(img => img.height));
+        
         setProjectData(prev => ({
           ...prev,
-          width: imageDataArray[0].width,
-          height: imageDataArray[0].height
+          width: maxWidth,
+          height: maxHeight
         }));
       }
 
@@ -174,12 +177,14 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
       URL.revokeObjectURL(newImages[index].previewUrl);
       newImages.splice(index, 1);
       
-      // Update dimensions if we removed the first image
-      if (index === 0 && newImages.length > 0) {
+      if (newImages.length > 0) {
+        const maxWidth = Math.max(...newImages.map(img => img.width));
+        const maxHeight = Math.max(...newImages.map(img => img.height));
+        
         setProjectData(prev => ({
           ...prev,
-          width: newImages[0].width,
-          height: newImages[0].height
+          width: maxWidth,
+          height: maxHeight
         }));
       }
       
