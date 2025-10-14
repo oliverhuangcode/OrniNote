@@ -351,14 +351,14 @@ const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
   );
 
   return (
-    <div className="flex-1 bg-gray-200 overflow-hidden relative">
+    <div className="flex-1 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
       <div className="absolute inset-0 overflow-auto">
         <div className="min-h-full flex items-center justify-center p-8" ref={containerRef}>
           <div
-            className="relative bg-white rounded-lg shadow-2xl overflow-hidden"
+            className="relative bg-white rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5"
             style={{ width: scaledWidth, height: scaledHeight, minWidth: 400 * pixelScale, minHeight: 300 * pixelScale }}
           >
-            <div className="relative w-full h-full bg-gray-100">
+            <div className="relative w-full h-full bg-gray-50">
               <div ref={zoomLayerRef} className="absolute inset-0" style={zoomStyle}>
                 <AnnotationLayer
                   annotations={annotations}
@@ -387,25 +387,53 @@ const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
                   className="absolute inset-0 pointer-events-none z-5"
                   style={{
                     backgroundImage: `
-                      linear-gradient(to right, rgba(0,0,0,0.2) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(0,0,0,0.2) 1px, transparent 1px)
+                      linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
                     `,
                     backgroundSize: "50px 50px",
                   }}
                 />
               )}
             </div>
-            <div className="absolute top-4 right-4 flex gap-2">
-              <button onClick={() => onZoom("in")} className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100">
-                +
+            
+            {/* Modernized Zoom Controls */}
+            <div className="absolute top-4 right-4 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-1">
+              <button 
+                onClick={() => onZoom("out")} 
+                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-700 font-semibold"
+                title="Zoom out"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 8H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
               </button>
-              <button onClick={() => onZoom("out")} className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100">
-                −
+              
+              <div className="px-3 py-1 text-sm font-medium text-gray-700 min-w-[60px] text-center">
+                {zoomPercent}%
+              </div>
+              
+              <button 
+                onClick={() => onZoom("in")} 
+                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-700 font-semibold"
+                title="Zoom in"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 4V12M4 8H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
               </button>
-              <button onClick={() => onZoom("reset")} className="w-8 h-8 bg-white bg-opacity-80 rounded border border-gray-300 flex items-center justify-center hover:bg-opacity-100">
-                ⟲
+              
+              <div className="w-px h-6 bg-gray-300 mx-1"></div>
+              
+              <button 
+                onClick={() => onZoom("reset")} 
+                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-700"
+                title="Reset zoom (100%)"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8Z" stroke="currentColor" strokeWidth="1.5"/>
+                  <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                </svg>
               </button>
-              <div className="ml-2 px-2 py-1 bg-white bg-opacity-80 rounded border border-gray-300 text-xs font-medium">{zoomPercent}%</div>
             </div>
           </div>
         </div>
