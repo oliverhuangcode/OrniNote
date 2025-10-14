@@ -6,6 +6,7 @@ import useLineTool from "./CanvasArea/tools/LineTool";
 import useShapeTool from "./CanvasArea/tools/ShapeTool";
 import useBrushTool from "./CanvasArea/tools/BrushTool";
 import usePenTool from "./CanvasArea/tools/PenTool";
+import useSkeletonTool from "./CanvasArea/tools/SkeletonTool";
 
 interface ActiveFile {
   id: string;
@@ -21,7 +22,7 @@ interface CanvasAreaProps {
   onZoom: (direction: "in" | "out" | "reset") => void;
   selectedTool: string;
   annotations: Annotation[];
-  setAnnotations: React.Dispatch<React.SetStateAction<Annotation[]>>; // ✅ use proper Dispatch type
+  setAnnotations: React.Dispatch<React.SetStateAction<Annotation[]>>;
   currentAnnotation: Annotation | null;
   setCurrentAnnotation: React.Dispatch<React.SetStateAction<Annotation | null>>;
   isDrawing: boolean;
@@ -32,6 +33,10 @@ interface CanvasAreaProps {
   projectImage?: ActiveFile;
   onAnnotationCreated?: (annotation: Annotation) => void;
   showGrid: boolean;
+  currentLabelId?: string | null;
+  currentLabelName?: string;
+  labels?: Array<{ _id: string; name: string; colour: string }>;
+  onLabelAdvance?: () => void;
 }
 
 export default function CanvasArea({
@@ -49,7 +54,11 @@ export default function CanvasArea({
   selectedColor,
   projectImage,
   onAnnotationCreated,
-  showGrid
+  showGrid,
+  currentLabelId,
+  currentLabelName,
+  labels,
+  onLabelAdvance
 }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
@@ -105,16 +114,23 @@ const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
   const rectTool = useShapeTool("rectangle", addAnnotation, projectImage?.id || "", selectedColor);
   const brushTool = useBrushTool(addAnnotation, projectImage?.id || "", selectedColor);
   const penTool = usePenTool(addAnnotation, projectImage?.id || "", selectedColor);
+  const skeletonTool = useSkeletonTool(addAnnotation, projectImage?.id || "", currentLabelId || "", currentLabelName || "", selectedColor, onLabelAdvance);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedTool === "pen" && e.key === "Escape" && penTool.clear) {
         penTool.clear();
       }
+      if (selectedTool === "skeleton" && e.key === "Escape" && skeletonTool.clear) {
+        skeletonTool.clear();
+      }
+      if (selectedTool === "skeleton" && e.key === "Enter" && skeletonTool.finish) {
+        skeletonTool.finish();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedTool, penTool]);
+  }, [selectedTool, penTool, skeletonTool]);
 
   const [interaction, setInteraction] = useState<any>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -138,9 +154,13 @@ const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
       const { x, y } = toLocalPoint(e.clientX, e.clientY);
       if (selectedTool === "pen") penTool.onClick(x, y);
       else if (selectedTool === "text") textTool.onClick(x, y);
+      else if (selectedTool === "skeleton") {
+        const clickedPointIndex = skeletonTool.getClickedPointIndex(x, y);
+        skeletonTool.onClick(x, y, clickedPointIndex);
+      }
       else if (selectedTool === "move") setSelectedAnnotationId(null);
     },
-    [selectedTool, penTool, textTool, toLocalPoint, setSelectedAnnotationId]
+    [selectedTool, penTool, textTool, skeletonTool, toLocalPoint, setSelectedAnnotationId]
   );
 
   const handleMarqueeSelection = useCallback(
@@ -357,6 +377,7 @@ const cloneAnnotations = <T extends Annotation | Annotation[]>(data: T): T =>
                   {selectedTool === "line" && lineTool.preview}
                   {(selectedTool === "rectangle" || selectedTool === "polygon") && rectTool.preview}
                   {selectedTool === "brush" && brushTool.preview}
+                  {selectedTool === "skeleton" && skeletonTool.preview}
                   {renderSelectionHandles()}
                 </AnnotationLayer>
               </div>

@@ -42,10 +42,12 @@ export interface Style {
 export interface Annotation {
   id: string;
   imageId: string;
-  type: "rectangle" | "line" | "brush" | "text" | "polygon" | "path";
+  type: "rectangle" | "line" | "brush" | "text" | "polygon" | "path" | "skeleton";
   properties: {
     position?: Point; // for text or rectangle origin
     points?: Point[]; // for line/polyline/polygon
+    skeletonPoints?: Array<{x: number; y: number; labelId: string; labelName: string; color: string}>; // for skeleton keypoints
+    skeletonEdges?: Array<{from: number; to: number; labelId: string; labelName: string; color: string}>; // for skeleton connections
     text?: string; // for text annotations
     width?: number; // rectangle width
     height?: number; // rectangle height

@@ -106,6 +106,47 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
             cursor="move"
           />
         );
+
+      
+      case "skeleton":
+        if (!a.properties.skeletonPoints || !a.properties.skeletonEdges) return null;
+        return (
+          <g key={a.id}>
+            {/* Draw edges */}
+            {a.properties.skeletonEdges.map((edge: any, i: number) => {
+              const fromPoint = a.properties.skeletonPoints?.[edge.from];
+              const toPoint = a.properties.skeletonPoints?.[edge.to];
+              if (!fromPoint || !toPoint) return null;
+              return (
+                <line
+                  key={`edge-${i}`}
+                  x1={fromPoint.x}
+                  y1={fromPoint.y}
+                  x2={toPoint.x}
+                  y2={toPoint.y}
+                  stroke={edge.color}
+                  strokeWidth={2}
+                  pointerEvents="all"
+                  cursor="move"
+                />
+              );
+            })}
+            {/* Draw points */}
+            {a.properties.skeletonPoints.map((p: any, i: number) => (
+              <circle
+                key={`point-${i}`}
+                cx={p.x}
+                cy={p.y}
+                r={6}
+                fill={p.color}
+                stroke="#fff"
+                strokeWidth={2}
+                pointerEvents="all"
+                cursor="move"
+              />
+            ))}
+          </g>
+        );
       
       default:
         return null;

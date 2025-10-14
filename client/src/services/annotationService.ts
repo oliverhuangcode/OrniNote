@@ -1,7 +1,7 @@
 import { getAuthHeaders, handleAuthError } from '../utils/apiHelper';
 
 export interface ShapeData {
-  type: 'rectangle' | 'polygon' | 'line' | 'point' | 'path' | 'brush' | 'text';
+  type: 'rectangle' | 'polygon' | 'line' | 'point' | 'path' | 'brush' | 'text' | 'skeleton';
   coordinates: any;
   isNormalised: boolean;
 }

@@ -72,10 +72,34 @@ const validateTextCoordinates = (coords) => {
   );
 };
 
+const validateSkeletonCoordinates = (coords) => {
+  return (
+    coords &&
+    Array.isArray(coords.points) &&
+    Array.isArray(coords.edges) &&
+    coords.points.every((p) => 
+      p &&
+      typeof p.x === 'number' &&
+      typeof p.y === 'number' &&
+      typeof p.labelId === 'string' &&
+      typeof p.labelName === 'string' &&
+      typeof p.color === 'string'
+    ) &&
+    coords.edges.every((e) =>
+      e &&
+      typeof e.from === 'number' &&
+      typeof e.to === 'number' &&
+      typeof e.labelId === 'string' &&
+      typeof e.labelName === 'string' &&
+      typeof e.color === 'string'
+    )
+  );
+};
+
 const shapeDataSchema = new Schema({
   type: {
     type: String,
-    enum: ['rectangle', 'polygon', 'line', 'point', 'path', 'brush', 'text'],
+    enum: ['rectangle', 'polygon', 'line', 'point', 'path', 'brush', 'text', 'skeleton'],
     required: true
   },
   coordinates: {
@@ -122,6 +146,10 @@ shapeDataSchema.pre('validate', function(next) {
     
     case 'text':
       isValid = validateTextCoordinates(coords);
+      break;
+      
+    case 'skeleton':
+      isValid = validateSkeletonCoordinates(coords);
       break;
     
     default:

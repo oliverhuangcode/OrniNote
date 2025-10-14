@@ -280,6 +280,21 @@ export default function Annotation() {
     }
   };
 
+  const advanceToNextLabel = () => {
+    if (!currentLabelId || labels.length === 0) return;
+    
+    const currentIndex = labels.findIndex((l) => l._id === currentLabelId);
+    if (currentIndex === -1) return;
+    
+    // Move to next label, or wrap to first if at end
+    const nextIndex = (currentIndex + 1) % labels.length;
+    const nextLabel = labels[nextIndex];
+    
+    setCurrentLabelId(nextLabel._id);
+    setSelectedColor(nextLabel.colour);
+    console.log("Auto-advanced to label:", nextLabel.name);
+  };
+
   // Load all annotations within a project
   const loadAnnotationsForProject = async (projectId: string) => {
     try {
@@ -320,6 +335,9 @@ export default function Annotation() {
             if (ann.shapeData.type === 'text' && ann.shapeData.coordinates.text) {
               properties.text = ann.shapeData.coordinates.text;
             }
+          } else if (ann.shapeData.type === 'skeleton') {
+            properties.skeletonPoints = ann.shapeData.coordinates.points || [];
+            properties.skeletonEdges = ann.shapeData.coordinates.edges || [];
           }
 
           return {
@@ -401,6 +419,9 @@ export default function Annotation() {
             ) {
               properties.text = ann.shapeData.coordinates.text;
             }
+          } else if (ann.shapeData.type === "skeleton") {
+            properties.skeletonPoints = ann.shapeData.coordinates.points || [];
+            properties.skeletonEdges = ann.shapeData.coordinates.edges || [];
           }
 
         return {
@@ -480,6 +501,11 @@ export default function Annotation() {
           x: annotation.properties.position.x,
           y: annotation.properties.position.y,
           text: annotation.properties.text || "",
+        };
+      } else if (annotation.type === "skeleton") {
+        coordinates = {
+          points: annotation.properties.skeletonPoints || [],
+          edges: annotation.properties.skeletonEdges || [],
         };
       } else {
         console.warn(
@@ -899,16 +925,16 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
       label: "Brush",
     },
     {
-      id: "edit",
-      isSelected: selectedTool === "edit",
+      id: "skeleton",
+      isSelected: selectedTool === "skeleton",
       icon: (
         <Wand2
-          className={selectedTool === "edit" ? "text-white" : "text-black"}
+          className={selectedTool === "skeleton" ? "text-white" : "text-black"}
           strokeWidth={2.5}
           size={28}
         />
       ),
-      label: "Edit",
+      label: "Skeleton",
     },
     {
       id: "text",
@@ -1073,6 +1099,10 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
           projectImage={activeFile}
           onAnnotationCreated={saveAnnotationToDatabase}
           showGrid={showGrid}
+          currentLabelId={currentLabelId}
+          currentLabelName={labels.find(l => l._id === currentLabelId)?.name}
+          labels={labels}
+          onLabelAdvance={advanceToNextLabel}
         />
         <LabelPanel
           labels={labels}
