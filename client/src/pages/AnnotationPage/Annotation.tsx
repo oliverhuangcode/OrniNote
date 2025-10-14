@@ -866,18 +866,6 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
       label: "Move",
     },
     {
-      id: "search",
-      isSelected: selectedTool === "search",
-      icon: (
-        <Search
-          className={selectedTool === "search" ? "text-white" : "text-black"}
-          strokeWidth={2.5}
-          size={28}
-        />
-      ),
-      label: "Search",
-    },
-    {
       id: "marquee",
       isSelected: selectedTool === "marquee",
       icon: (
