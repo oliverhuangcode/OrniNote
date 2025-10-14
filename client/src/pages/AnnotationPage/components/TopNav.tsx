@@ -8,6 +8,7 @@ import { getAnonymousName, getInitials } from "../../../utils/mockData";
 
 interface TopNavProps {
   projectName?: string;
+  currentImage?: ActiveFile;
   activeFiles: ActiveFile[];
   onSwitchFile: (fileId: string) => void;
   onCloseFile: (fileId: string) => void;
@@ -25,11 +26,10 @@ interface TopNavProps {
   others: readonly User<any, any>[];
   cursorColors: string[];
   currentUser?: {
-    // ADD THIS
     username: string;
     email: string;
   };
-  onSignOut: () => void; // ADD THIS
+  onSignOut: () => void; 
   onUndo: () => void;
   onRedo: () => void;
   canUndo?: boolean;
@@ -38,6 +38,7 @@ interface TopNavProps {
 
 export default function TopNav({
   projectName,
+  currentImage,
   activeFiles,
   onSwitchFile,
   onCloseFile,
@@ -290,6 +291,8 @@ export default function TopNav({
             </Link>
             <span className="text-gray-400">›</span>
             <span className="text-gray-700">{projectName || "Project"}</span>
+            <span className="text-gray-400">›</span>
+            <span className="text-gray-700">{currentImage?.name || "Image"}</span>
           </nav>
 
           {/* User Avatars */}

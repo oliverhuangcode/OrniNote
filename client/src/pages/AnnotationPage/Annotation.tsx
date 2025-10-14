@@ -1053,6 +1053,7 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
     >
       <TopNav
         projectName={project.name}
+        currentImage={activeFile}
         activeFiles={activeFiles}
         onSwitchFile={switchFile}
         onCloseFile={closeFile}
