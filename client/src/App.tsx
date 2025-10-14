@@ -2,8 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/authContext';
 import { ProtectedRoute } from './components/protectedRoute';
-import Login from './pages/OnboardingPage/Login';
-import Signup from './pages/OnboardingPage/SignUp';
+import Auth from './pages/OnboardingPage/Auth';
 import Dashboard from './pages/ProjectsPage/Dashboard';
 import AcceptInvite from './components/modals/AcceptInviteModal/AcceptInvite';
 import { AnnotationCanvas } from './pages/AnnotationPage/Annotation';
@@ -15,8 +14,8 @@ const App: React.FC = () => {
       <Router>
         <Routes>
           {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/signup" element={<Auth />} />
           <Route path="/accept-invite" element={<AcceptInvite />} />
           
           {/* Protected routes */}
