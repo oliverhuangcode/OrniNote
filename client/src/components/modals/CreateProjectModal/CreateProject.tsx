@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useS3Upload, s3UploadService } from "../../../services/s3UploadService";
+import { getAuthHeaders } from "../../../utils/apiHelper";
 
 interface CreateProjectProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface ProjectData {
   imageUrl?: string;
   imageFilename?: string;
   teamMembers: string[];
+  inviteEmails?: string[]; // Emails to invite after project creation
   additionalImages?: Array<{
     imageUrl: string;
     imageFilename: string;
@@ -29,18 +31,26 @@ interface ImageData {
   height: number;
 }
 
-const teamMembers = [
-  { id: 1, name: "J", color: "#5CBF7D" },
-  { id: 2, name: "J", color: "#5BABE9" },
-  { id: 3, name: "J", color: "#F39A4D" },
-];
+interface PendingInvite {
+  email: string;
+  color: string;
+  initial: string;
+}
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+
+// Generate a random color for invite avatars
+const generateColor = () => {
+  const colors = ["#5CBF7D", "#5BABE9", "#F39A4D", "#9B59B6", "#E74C3C", "#3498DB"];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
 
 export default function CreateProject({ isOpen, onClose, onCreateProject }: CreateProjectProps) {
   const [projectData, setProjectData] = useState<ProjectData>({
     name: "",
     width: 1920,
     height: 1080,
-    teamMembers: ["1", "2", "3"],
+    teamMembers: [],
   });
   
   const [dragActive, setDragActive] = useState(false);
@@ -51,9 +61,14 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
     total: number;
     fileName: string;
   } | null>(null);
+  
+  // Team collaboration state
+  const [email, setEmail] = useState("");
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Use the S3 upload hook
-  const { error, resetUpload } = useS3Upload();
+  const { error: uploadError, resetUpload } = useS3Upload();
 
   // Don't render if modal is not open
   if (!isOpen) return null;
@@ -192,6 +207,79 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
     });
   };
 
+  // Add team member invite
+  const handleAddTeamMember = () => {
+    if (!email.trim()) return;
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    // Check for duplicates
+    if (pendingInvites.some(invite => invite.email.toLowerCase() === email.toLowerCase())) {
+      setError("This email has already been added");
+      return;
+    }
+
+    // Add to pending invites
+    setPendingInvites(prev => [
+      ...prev,
+      {
+        email: email.trim(),
+        color: generateColor(),
+        initial: email.charAt(0).toUpperCase()
+      }
+    ]);
+
+    setEmail("");
+    setError(null);
+  };
+
+  // Remove pending invite
+  const removeTeamMember = (emailToRemove: string) => {
+    setPendingInvites(prev => prev.filter(invite => invite.email !== emailToRemove));
+  };
+
+  // Send invites after project creation
+  const sendInvites = async (projectId: string, projectName: string) => {
+    const invitePromises = pendingInvites.map(async (invite) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/invite`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            email: invite.email,
+            projectId,
+            projectName
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to send invite');
+        }
+
+        return { success: true, email: invite.email };
+      } catch (err) {
+        console.error(`Failed to invite ${invite.email}:`, err);
+        return { success: false, email: invite.email, error: err };
+      }
+    });
+
+    const results = await Promise.all(invitePromises);
+    const failed = results.filter(r => !r.success);
+    
+    if (failed.length > 0) {
+      console.warn(`Failed to send ${failed.length} invites:`, failed);
+      alert(`Project created! However, ${failed.length} invitation(s) failed to send. You can invite them from the Share menu.`);
+    } else if (pendingInvites.length > 0) {
+      alert(`Project created and ${pendingInvites.length} invitation(s) sent!`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -249,11 +337,21 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
         imageFilename: uploadedImages[0].imageFilename,
         width: uploadedImages[0].imageWidth,
         height: uploadedImages[0].imageHeight,
-        additionalImages: uploadedImages.slice(1) // All images except the first
+        additionalImages: uploadedImages.slice(1), // All images except the first
+        inviteEmails: pendingInvites.map(invite => invite.email) // Include emails for backend
       };
       
       // Call the parent's create project handler
       await onCreateProject(finalProjectData);
+      
+      // Note: If your onCreateProject returns the created project with an ID,
+      // you can send invites here. Otherwise, handle invites in the parent component.
+      // Example:
+      // const createdProject = await onCreateProject(finalProjectData);
+      // if (createdProject && createdProject._id && pendingInvites.length > 0) {
+      //   await sendInvites(createdProject._id, projectData.name);
+      // }
+      
       handleClose();
     } catch (err) {
       console.error('Error creating project:', err);
@@ -272,30 +370,18 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
     
     // Reset form data
     setProjectData({
-      name: "Duck",
+      name: "",
       width: 1920,
       height: 1080,
-      teamMembers: ["1", "2", "3"],
+      teamMembers: [],
     });
     
+    // Reset team invites
+    setPendingInvites([]);
+    setEmail("");
+    setError(null);
+    
     onClose();
-  };
-
-  const toggleTeamMember = (memberId: string) => {
-    setProjectData(prev => ({
-      ...prev,
-      teamMembers: prev.teamMembers.includes(memberId)
-        ? prev.teamMembers.filter(id => id !== memberId)
-        : [...prev.teamMembers, memberId]
-    }));
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -323,10 +409,10 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error Display */}
-          {error && (
+          {(uploadError || error) && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="text-red-600 text-sm">
-                <strong>Upload Error:</strong> {error}
+                <strong>Error:</strong> {uploadError || error}
               </div>
             </div>
           )}
@@ -458,34 +544,80 @@ export default function CreateProject({ isOpen, onClose, onCreateProject }: Crea
             </div>
           </div>
 
-          {/* Team */}
+          {/* Team Members Section */}
           <div>
             <label className="font-inter font-bold text-lg text-black mb-2 block">
-              Team
+              Invite Team Members
             </label>
-            <div className="flex items-center gap-2">
-              {teamMembers.map((member) => (
-                <button
-                  key={member.id}
-                  type="button"
-                  onClick={() => toggleTeamMember(member.id.toString())}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-inter font-bold transition-opacity ${
-                    projectData.teamMembers.includes(member.id.toString()) ? 'opacity-100' : 'opacity-50'
-                  }`}
-                  style={{ backgroundColor: member.color }}
-                >
-                  {member.name}
-                </button>
-              ))}
+            <p className="text-gray-500 font-inter text-sm mb-3">
+              Invite teammates to collaborate on this project
+            </p>
+            
+            {/* Email Input */}
+            <div className="flex gap-3 mb-4">
+              <div className="flex-1 relative">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError(null);
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTeamMember();
+                    }
+                  }}
+                  placeholder="example@email.com"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg font-inter text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={isProcessing}
+                />
+              </div>
               <button
                 type="button"
-                className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-black hover:bg-gray-400 transition-colors"
+                onClick={handleAddTeamMember}
+                disabled={!email.trim() || isProcessing}
+                className="px-5 py-2 bg-green-600 text-white text-sm font-inter rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <path d="M11.0002 4.58337V17.4167M4.5835 11H17.4168" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                Add
               </button>
             </div>
+
+            {/* Pending Invites List */}
+            {pendingInvites.length > 0 && (
+              <div className="space-y-2 mt-4">
+                {pendingInvites.map((invite) => (
+                  <div key={invite.email} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                    <div 
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white font-inter font-medium"
+                      style={{ backgroundColor: invite.color }}
+                    >
+                      {invite.initial}
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-inter text-sm text-black">{invite.email}</span>
+                      <span className="text-xs text-gray-500 ml-2">Pending</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeTeamMember(invite.email)}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                      disabled={isProcessing}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M13.5 4.5L4.5 13.5M4.5 4.5L13.5 13.5" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

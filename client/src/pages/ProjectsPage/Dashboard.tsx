@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import CreateProject from "../../components/modals/CreateProjectModal/CreateProject";
 import { projectService, Project as BackendProject } from "../../services/projectService";
 import { useAuth } from "../../contexts/authContext";
+import { getAuthHeaders } from "../../utils/apiHelper";
 
 interface Project {
   id: string;
@@ -22,6 +23,7 @@ interface ProjectData {
   imageUrl?: string;
   imageFilename?: string;
   teamMembers: string[];
+  inviteEmails?: string[]; // Team member emails to invite after project creation
   additionalImages?: Array<{
     imageUrl: string;
     imageFilename: string;
@@ -32,6 +34,8 @@ interface ProjectData {
 
 type ViewType = "home" | "shared" | "deleted";
 type SortType = "Recent" | "Name" | "Date Modified";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
 export default function Dashboard() {
   const { user, signout } = useAuth();
@@ -63,7 +67,7 @@ export default function Dashboard() {
     if (user) {
       loadProjects();
     }
-  }, [user, currentView]); // ADD currentView here
+  }, [user, currentView]);
 
   if (!user) {
     return (
@@ -132,31 +136,77 @@ export default function Dashboard() {
     }
   };
 
+  // Send invites after project is created
+  const sendInvites = async (projectId: string, projectName: string, inviteEmails: string[]) => {
+    if (!inviteEmails || inviteEmails.length === 0) return;
 
-const handleCreateProject = async (projectData: ProjectData) => {
-  if (!user) {
-  alert('You must be logged in to create a project');
-  return;
-  }
+    console.log(`Sending ${inviteEmails.length} invitations for project: ${projectName}`);
+    
+    const invitePromises = inviteEmails.map(async (email) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/invite`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            email,
+            projectId,
+            projectName
+          }),
+        });
 
-  try {
-    if (!projectData.imageUrl) {
-      throw new Error('Image URL is required');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to send invite');
+        }
+
+        const result = await response.json();
+        console.log(`Invite sent successfully to ${email}`);
+        return { success: true, email };
+      } catch (err) {
+        console.error(`Failed to invite ${email}:`, err);
+        return { success: false, email, error: err };
+      }
+    });
+
+    const results = await Promise.all(invitePromises);
+    const failed = results.filter(r => !r.success);
+    const succeeded = results.filter(r => r.success);
+    
+    // Only alert if there were failures
+    if (failed.length > 0 && succeeded.length > 0) {
+      alert(`${succeeded.length} invitation(s) sent, but ${failed.length} failed. You can resend them from the Share menu.`);
+    } else if (failed.length === inviteEmails.length) {
+      alert(`Failed to send all ${failed.length} invitation(s). You can send them from the Share menu.`);
+    }
+    // Silent success - no alert if all invites succeeded
+  };
+
+  const handleCreateProject = async (projectData: ProjectData) => {
+    if (!user) {
+      alert('You must be logged in to create a project');
+      return;
     }
 
-    // Prepare data for backend
-    const backendProjectData = {
-      name: projectData.name,
-      description: '', 
-      imageUrl: projectData.imageUrl,
-      imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
-      imageWidth: projectData.width,
-      imageHeight: projectData.height,
-      ownerId: user._id
-    };
+    try {
+      if (!projectData.imageUrl) {
+        throw new Error('Image URL is required');
+      }
+
+      // Prepare data for backend
+      const backendProjectData = {
+        name: projectData.name,
+        description: '', 
+        imageUrl: projectData.imageUrl,
+        imageFilename: projectData.imageFilename || 'uploaded-image.jpg',
+        imageWidth: projectData.width,
+        imageHeight: projectData.height,
+        ownerId: user._id
+      };
 
       // Create project in backend (MongoDB) with the first image
       const newProject = await projectService.createProject(backendProjectData);
+      
+      console.log('Project created successfully:', newProject);
       
       // If there are additional images, batch add them
       if (projectData.additionalImages && projectData.additionalImages.length > 0) {
@@ -173,23 +223,24 @@ const handleCreateProject = async (projectData: ProjectData) => {
         const formattedProject = projectService.convertToCardFormat(updatedProject);
         setProjects(prev => [formattedProject, ...prev]);
         
-        console.log('Project created with all images successfully');
-        
-        // Navigate to annotation page
-        navigate(`/annotation/${updatedProject._id}`);
+        console.log('Additional images added successfully');
       } else {
         // No additional images, just use the newly created project
         const formattedProject = projectService.convertToCardFormat(newProject);
         setProjects(prev => [formattedProject, ...prev]);
-        
-        console.log('Project created successfully:', newProject);
-        
-        // Navigate to annotation page
-        navigate(`/annotation/${newProject._id}`);
       }
+
+      // Send invites if there are any team members to invite
+      if (projectData.inviteEmails && projectData.inviteEmails.length > 0) {
+        await sendInvites(newProject._id, projectData.name, projectData.inviteEmails);
+      }
+      
+      // Navigate to annotation page
+      navigate(`/annotation/${newProject._id}`);
     } catch (err) {
       console.error('Failed to create project:', err);
       setError(err instanceof Error ? err.message : 'Failed to create project');
+      alert(err instanceof Error ? err.message : 'Failed to create project');
     }
   };
 
@@ -491,7 +542,7 @@ const handleCreateProject = async (projectData: ProjectData) => {
                   <button
                     className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-inter"
                     onClick={() => {
-                      signout(); // Use the signout from useAuth
+                      signout();
                       setShowUserDropdown(false);
                       navigate("/login");
                     }}
