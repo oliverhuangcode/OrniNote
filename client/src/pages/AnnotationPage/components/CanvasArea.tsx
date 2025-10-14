@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Annotation } from "../types";
 import AnnotationLayer from "./CanvasArea/AnnotationLayer";
 import useTextTool from "./CanvasArea/tools/TextTool";
@@ -38,6 +44,7 @@ interface CanvasAreaProps {
   showGrid: boolean;
   beginAtomicChange?: () => void;
   endAtomicChange?: () => void;
+  onRemoveAnnotationId?: (id: string) => void;
 }
 
 type Interaction =
@@ -54,18 +61,17 @@ type Interaction =
       handle: RectHandle;
       start: { x: number; y: number };
       original: Annotation;
-    }
-  | {
-      kind: "line-end";
-      annId: string;
-      index: 0 | 1;
-      start: { x: number; y: number };
-      original: Annotation;
     };
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const MIN_W = 2;
 const MIN_H = 2;
+
+// --- helper: return a valid Mongo _id (24-hex) or null
+function getMongoId(a: any) {
+  const id = a?.backendId || a?.id;
+  return typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id) ? id : null;
+}
 
 export default function CanvasArea({
   zoomPercent,
@@ -85,6 +91,7 @@ export default function CanvasArea({
   showGrid,
   beginAtomicChange = () => {},
   endAtomicChange = () => {},
+  onRemoveAnnotationId,
 }: CanvasAreaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomLayerRef = useRef<HTMLDivElement | null>(null);
@@ -92,15 +99,28 @@ export default function CanvasArea({
 
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [imageDimensions, setImageDimensions] = useState({ width: 800, height: 600 });
+  const [imageDimensions, setImageDimensions] = useState({
+    width: 800,
+    height: 600,
+  });
 
   const [interaction, setInteraction] = useState<Interaction>(null);
-  const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [marqueeRect, setMarqueeRect] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
   const [groupSelection, setGroupSelection] = useState<string[]>([]);
-  const [marqueeStart, setMarqueeStart] = useState<{ x: number; y: number } | null>(null);
+  const [marqueeStart, setMarqueeStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   // image load handlers
-  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement | SVGImageElement>) => {
+  const handleImageLoad = (
+    e: React.SyntheticEvent<HTMLImageElement | SVGImageElement>
+  ) => {
     const img = e.currentTarget as any;
     setImageDimensions({
       width: img.naturalWidth,
@@ -128,24 +148,85 @@ export default function CanvasArea({
 
   // add annotation (creation tools call this)
   const addAnnotation = useCallback(
-    (a: Annotation) => {
-      setAnnotations(prev => [...prev, a]);
-      onAnnotationCreated?.(a);
+    async (a: Annotation) => {
+      const tempId = a.id || `tmp_${Math.random().toString(36).slice(2, 9)}`;
+      const optimistic = { ...a, id: tempId };
+      setAnnotations((prev) => [...prev, optimistic]);
+      onAnnotationCreated?.(optimistic);
+
+      try {
+        // Convert frontend annotation → API shape
+        const shapeData = {
+          type: a.type,
+          coordinates: a.properties,
+          isNormalised: false,
+        };
+
+        const annotationData = {
+          imageId: projectImage?.id || "",
+          labelId: (a as any).labelId?._id || (a as any).labelId || "",
+          createdBy: (a as any).createdBy?._id || (a as any).createdBy || "",
+          shapeData,
+        };
+
+        const created = await annotationService.createAnnotation(
+          annotationData
+        );
+
+        // Server returns: { annotation: { _id, ... } }
+        if (created && created._id) {
+          setAnnotations((prev) =>
+            prev.map((x) =>
+              x.id === tempId
+                ? { ...x, id: created._id, backendId: created._id }
+                : x
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Error creating annotation:", err);
+      }
     },
-    [setAnnotations, onAnnotationCreated]
+    [setAnnotations, onAnnotationCreated, projectImage?.id]
   );
 
   // tools
-  const textTool = useTextTool(pixelScale, addAnnotation, projectImage?.id || "", selectedColor);
-  const lineTool = useLineTool(addAnnotation, projectImage?.id || "", selectedColor);
-  const rectTool = useShapeTool("rectangle", addAnnotation, projectImage?.id || "", selectedColor);
-  const brushTool = useBrushTool(addAnnotation, projectImage?.id || "", selectedColor);
-  const penTool = usePenTool(addAnnotation, projectImage?.id || "", selectedColor);
+  const textTool = useTextTool(
+    pixelScale,
+    addAnnotation,
+    projectImage?.id || "",
+    selectedColor
+  );
+  const lineTool = useLineTool(
+    addAnnotation,
+    projectImage?.id || "",
+    selectedColor
+  );
+  const rectTool = useShapeTool(
+    "rectangle",
+    addAnnotation,
+    projectImage?.id || "",
+    selectedColor
+  );
+  const brushTool = useBrushTool(
+    addAnnotation,
+    projectImage?.id || "",
+    selectedColor
+  );
+  const penTool = usePenTool(
+    addAnnotation,
+    projectImage?.id || "",
+    selectedColor
+  );
 
   // ESC clears active pen path (if tool supports)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (selectedTool === "pen" && e.key === "Escape" && (penTool as any)?.clear) {
+      if (
+        selectedTool === "pen" &&
+        e.key === "Escape" &&
+        (penTool as any)?.clear
+      ) {
         (penTool as any).clear();
       }
     };
@@ -205,10 +286,18 @@ export default function CanvasArea({
       const h = a.properties.height || 0;
       return { minX: x, minY: y, maxX: x + w, maxY: y + h };
     }
-    if ((a.type === "line" || a.type === "path" || a.type === "brush") && a.properties.points?.length) {
-      const xs = a.properties.points.map(p => p.x);
-      const ys = a.properties.points.map(p => p.y);
-      return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+    if (
+      (a.type === "line" || a.type === "path" || a.type === "brush") &&
+      a.properties.points?.length
+    ) {
+      const xs = a.properties.points.map((p) => p.x);
+      const ys = a.properties.points.map((p) => p.y);
+      return {
+        minX: Math.min(...xs),
+        minY: Math.min(...ys),
+        maxX: Math.max(...xs),
+        maxY: Math.max(...ys),
+      };
     }
     if (a.type === "text" && a.properties.position) {
       const { x, y } = a.properties.position;
@@ -278,20 +367,89 @@ export default function CanvasArea({
     return next;
   }
 
+  // convert current annotation -> backend shapeData
+  const shapeDataFromAnn = (a: Annotation) => {
+    if (a.type === "rectangle" && a.properties.position) {
+      return {
+        type: "rectangle" as const,
+        coordinates: {
+          x: a.properties.position.x,
+          y: a.properties.position.y,
+          width: a.properties.width || 0,
+          height: a.properties.height || 0,
+        },
+        isNormalised: false,
+      };
+    }
+    if (
+      (a.type === "line" || a.type === "path" || a.type === "brush") &&
+      a.properties.points
+    ) {
+      return {
+        type: a.type as "line" | "path" | "brush",
+        coordinates: {
+          points: a.properties.points.map((p: any) => [p.x, p.y]),
+        },
+        isNormalised: false,
+      };
+    }
+    if (a.type === "text" && a.properties.position) {
+      return {
+        type: "text" as const,
+        coordinates: {
+          x: a.properties.position.x,
+          y: a.properties.position.y,
+          text: a.properties.text || "",
+        },
+        isNormalised: false,
+      };
+    }
+    // fallback (shouldn't happen with supported types)
+    return {
+      type: "rectangle" as const,
+      coordinates: {},
+      isNormalised: false,
+    };
+  };
+
   // delete (optimistic + rollback)
   const deleteAnnotationById = useCallback(
     async (id: string) => {
-      const snapshot = annotations.slice();
-      setAnnotations(prev => prev.filter(a => a.id !== id));
+      // Find both ids first
+      const ann = annotations.find((a) => a.id === id);
+      const delId = (ann as any)?.backendId || id;
+
+      // Optimistic remove by BOTH ids (handles temp/new & persisted shapes)
+      const snapshot = annotations;
+      setAnnotations((prev) =>
+        prev.filter((a) => a.id !== id && (a as any)?.backendId !== delId)
+      );
       setSelectedAnnotationId(null);
+
       try {
-        await annotationService.deleteAnnotation(id);
+        // Only call backend if it's a Mongo ObjectId
+        const isMongoId = /^[0-9a-fA-F]{24}$/.test(delId);
+        if (isMongoId) {
+          const ann = annotations.find((a) => a.id === id);
+          const mongoId = getMongoId(ann);
+          // optimistic remove already done above
+
+          if (mongoId) {
+            await annotationService.deleteAnnotation(mongoId);
+            onRemoveAnnotationId?.(mongoId); // tell parent the real id that was deleted
+          } else {
+            // no backend delete (temp/new item)
+            onRemoveAnnotationId?.(id);
+          }
+        }
+        // If you broadcast via Liveblocks, remove here too:
+        // onRemoveAnnotationId?.(delId);
       } catch (err) {
         console.error("Delete failed; rolling back:", err);
         setAnnotations(snapshot);
       }
     },
-    [annotations, setAnnotations, setSelectedAnnotationId]
+    [annotations, onRemoveAnnotationId, setAnnotations, setSelectedAnnotationId]
   );
 
   // marquee selection
@@ -299,7 +457,7 @@ export default function CanvasArea({
     (x: number, y: number) => {
       if (!marqueeStart || !marqueeRect) return;
       const selectedIds = annotations
-        .filter(a => {
+        .filter((a) => {
           if (a.type === "rectangle" && a.properties.position) {
             const { x: ax, y: ay } = a.properties.position;
             const w = a.properties.width || 0;
@@ -311,9 +469,12 @@ export default function CanvasArea({
               ay + h <= marqueeRect.y + marqueeRect.h
             );
           }
-          if ((a.type === "line" || a.type === "path" || a.type === "brush") && a.properties.points) {
-            const xs = a.properties.points.map(p => p.x);
-            const ys = a.properties.points.map(p => p.y);
+          if (
+            (a.type === "line" || a.type === "path" || a.type === "brush") &&
+            a.properties.points
+          ) {
+            const xs = a.properties.points.map((p) => p.x);
+            const ys = a.properties.points.map((p) => p.y);
             const minX = Math.min(...xs),
               maxX = Math.max(...xs);
             const minY = Math.min(...ys),
@@ -327,7 +488,7 @@ export default function CanvasArea({
           }
           return false;
         })
-        .map(a => a.id);
+        .map((a) => a.id);
 
       setGroupSelection(selectedIds);
       setMarqueeRect(null);
@@ -370,7 +531,7 @@ export default function CanvasArea({
           const annId = g.getAttribute("data-ann-id");
           if (!annId) return;
           setSelectedAnnotationId(annId);
-          const ann = annotations.find(a => a.id === annId);
+          const ann = annotations.find((a) => a.id === annId);
           if (!ann) return;
           setInteraction({
             kind: "move",
@@ -384,7 +545,16 @@ export default function CanvasArea({
         return; // background: let click clear selection
       }
     },
-    [annotations, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, setSelectedAnnotationId, brushTool]
+    [
+      annotations,
+      lineTool,
+      rectTool,
+      selectedTool,
+      toLocalPoint,
+      setIsDrawing,
+      setSelectedAnnotationId,
+      brushTool,
+    ]
   );
 
   // mousemove
@@ -421,15 +591,22 @@ export default function CanvasArea({
         const dy = y - interaction.start.y;
 
         if (interaction.kind === "move") {
-          setAnnotations(prev =>
-            prev.map(a => {
+          setAnnotations((prev) =>
+            prev.map((a) => {
               if (a.id !== interaction.annId) return a;
               const cloned = clone(interaction.original);
               if (cloned.type === "rectangle" && cloned.properties.position) {
                 cloned.properties.position.x += dx;
                 cloned.properties.position.y += dy;
-              } else if ((cloned.type === "path" || cloned.type === "brush" || cloned.type === "line") && cloned.properties.points) {
-                cloned.properties.points = cloned.properties.points.map((p: any) => ({ x: p.x + dx, y: p.y + dy }));
+              } else if (
+                (cloned.type === "path" ||
+                  cloned.type === "brush" ||
+                  cloned.type === "line") &&
+                cloned.properties.points
+              ) {
+                cloned.properties.points = cloned.properties.points.map(
+                  (p: any) => ({ x: p.x + dx, y: p.y + dy })
+                );
               } else if (cloned.type === "text" && cloned.properties.position) {
                 cloned.properties.position.x += dx;
                 cloned.properties.position.y += dy;
@@ -439,18 +616,35 @@ export default function CanvasArea({
           );
         } else if (interaction.kind === "resize-rect") {
           const curr = { x, y };
-          const nextRect = computeResizedRect(interaction.original, interaction.handle, interaction.start, curr);
-          setAnnotations(prev => prev.map(a => (a.id === interaction.annId ? nextRect : a)));
+          const nextRect = computeResizedRect(
+            interaction.original,
+            interaction.handle,
+            interaction.start,
+            curr
+          );
+          setAnnotations((prev) =>
+            prev.map((a) => (a.id === interaction.annId ? nextRect : a))
+          );
         }
         return;
       }
     },
-    [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, interaction, setAnnotations, marqueeStart]
+    [
+      brushTool,
+      isDrawing,
+      lineTool,
+      rectTool,
+      selectedTool,
+      toLocalPoint,
+      interaction,
+      setAnnotations,
+      marqueeStart,
+    ]
   );
 
-  // mouseup
+  // mouseup (persist final geometry to DB)
   const handleMouseUp = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
+    async (e: React.MouseEvent<SVGSVGElement>) => {
       if (!isDrawing) return;
       const { x, y } = toLocalPoint(e.clientX, e.clientY);
 
@@ -464,10 +658,61 @@ export default function CanvasArea({
         handleMarqueeSelection(x, y);
       }
 
+      // Persist if this was a move/resize interaction
+      if (
+        interaction &&
+        (interaction.kind === "move" || interaction.kind === "resize-rect")
+      ) {
+        const final = annotations.find((a) => a.id === interaction.annId);
+        if (final) {
+          try {
+            const shapeData = shapeDataFromAnn(final);
+            const idForUpdate = (final as any).backendId || final.id;
+            // Guard: if it's not a Mongo ObjectId yet, skip once.
+            const isMongoId =
+              typeof idForUpdate === "string" &&
+              /^[0-9a-fA-F]{24}$/.test(idForUpdate);
+            if (!isMongoId) {
+              // optionally mark it dirty so you can flush later when id arrives
+              console.debug(
+                "Skipping update: annotation hasn't received a Mongo _id yet.",
+                final
+              );
+            } else {
+              const shapeData = shapeDataFromAnn(final);
+              const mongoId = getMongoId(final);
+              if (!mongoId) {
+                console.debug("Skip update; no Mongo _id yet", final);
+              } else {
+                await annotationService.updateAnnotation(mongoId, {
+                  shapeData,
+                });
+              }
+            }
+          } catch (err) {
+            console.error("Failed to persist annotation update:", err);
+            // optional: reload from server or show toast
+          }
+        }
+      }
+
       setIsDrawing(false);
       setInteraction(null);
     },
-    [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, handleMarqueeSelection]
+    [
+      isDrawing,
+      toLocalPoint,
+      selectedTool,
+      lineTool,
+      rectTool,
+      brushTool,
+      handleMarqueeSelection,
+      interaction,
+      annotations,
+      annotationService,
+      setIsDrawing,
+      setInteraction,
+    ]
   );
 
   // ESC clears selection
@@ -485,7 +730,12 @@ export default function CanvasArea({
       if (!selectedAnnotationId) return;
 
       const active = document.activeElement as HTMLElement | null;
-      if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+      if (
+        active &&
+        (active.tagName === "INPUT" ||
+          active.tagName === "TEXTAREA" ||
+          active.isContentEditable)
+      ) {
         return;
       }
 
@@ -508,7 +758,7 @@ export default function CanvasArea({
   // selection handles + Trash badge
   const renderSelectionHandles = useCallback(() => {
     if (!selectedAnnotationId) return null;
-    const a = annotations.find(x => x.id === selectedAnnotationId);
+    const a = annotations.find((x) => x.id === selectedAnnotationId);
     if (!a) return null;
 
     // delete badge
@@ -531,7 +781,17 @@ export default function CanvasArea({
         }}
         style={{ cursor: "pointer" }}
       >
-        <rect x={0} y={0} width={BTN} height={BTN} rx={RADIUS} ry={RADIUS} fill="#FEE2E2" stroke="#FCA5A5" strokeWidth={1} />
+        <rect
+          x={0}
+          y={0}
+          width={BTN}
+          height={BTN}
+          rx={RADIUS}
+          ry={RADIUS}
+          fill="#FEE2E2"
+          stroke="#FCA5A5"
+          strokeWidth={1}
+        />
         <g transform={`translate(${(BTN - ICON) / 2}, ${(BTN - ICON) / 2})`}>
           <Trash2 width={ICON} height={ICON} stroke="#B91C1C" strokeWidth={2} />
         </g>
@@ -547,10 +807,34 @@ export default function CanvasArea({
       const handleSize = 6;
 
       const handles = [
-        { key: "nw", x: x - handleSize / 2, y: y - handleSize / 2, cursor: "nwse-resize", handleKey: "nw" as const },
-        { key: "ne", x: x + w - handleSize / 2, y: y - handleSize / 2, cursor: "nesw-resize", handleKey: "ne" as const },
-        { key: "sw", x: x - handleSize / 2, y: y + h - handleSize / 2, cursor: "nesw-resize", handleKey: "sw" as const },
-        { key: "se", x: x + w - handleSize / 2, y: y + h - handleSize / 2, cursor: "nwse-resize", handleKey: "se" as const },
+        {
+          key: "nw",
+          x: x - handleSize / 2,
+          y: y - handleSize / 2,
+          cursor: "nwse-resize",
+          handleKey: "nw" as const,
+        },
+        {
+          key: "ne",
+          x: x + w - handleSize / 2,
+          y: y - handleSize / 2,
+          cursor: "nesw-resize",
+          handleKey: "ne" as const,
+        },
+        {
+          key: "sw",
+          x: x - handleSize / 2,
+          y: y + h - handleSize / 2,
+          cursor: "nesw-resize",
+          handleKey: "sw" as const,
+        },
+        {
+          key: "se",
+          x: x + w - handleSize / 2,
+          y: y + h - handleSize / 2,
+          cursor: "nwse-resize",
+          handleKey: "se" as const,
+        },
       ];
 
       return (
@@ -577,7 +861,10 @@ export default function CanvasArea({
               cursor={cursor}
               onMouseDown={(ev) => {
                 ev.stopPropagation();
-                const { x: lx, y: ly } = toLocalPoint((ev as any).clientX, (ev as any).clientY);
+                const { x: lx, y: ly } = toLocalPoint(
+                  (ev as any).clientX,
+                  (ev as any).clientY
+                );
                 setInteraction({
                   kind: "resize-rect",
                   annId: a.id,
@@ -594,9 +881,15 @@ export default function CanvasArea({
       );
     }
 
-    // non-rect: just show delete badge (you can add outlines if desired)
+    // non-rect: just show delete badge
     return <g>{DeleteBadge}</g>;
-  }, [selectedAnnotationId, annotations, deleteAnnotationById, toLocalPoint, setIsDrawing]);
+  }, [
+    selectedAnnotationId,
+    annotations,
+    deleteAnnotationById,
+    toLocalPoint,
+    setIsDrawing,
+  ]);
 
   // canvas size / zoom
   const canvasWidth = Math.max(imageDimensions.width, 800);
@@ -614,19 +907,33 @@ export default function CanvasArea({
     [pixelScale, canvasWidth, canvasHeight]
   );
 
-  // 👇 Disable text selection globally on the canvas when NOT using the Text tool
+  // Disable selection unless Text tool is active
   const canvasSelectClass = selectedTool !== "text" ? "select-none" : "";
 
   return (
-    <div className={`flex-1 bg-gray-200 overflow-hidden relative ${canvasSelectClass}`}>
+    <div
+      className={`flex-1 bg-gray-200 overflow-hidden relative ${canvasSelectClass}`}
+    >
       <div className="absolute inset-0 overflow-auto">
-        <div className="min-h-full flex items-center justify-center p-8" ref={containerRef}>
+        <div
+          className="min-h-full flex items-center justify-center p-8"
+          ref={containerRef}
+        >
           <div
             className="relative bg-white rounded-lg shadow-2xl overflow-hidden"
-            style={{ width: scaledWidth, height: scaledHeight, minWidth: 400 * pixelScale, minHeight: 300 * pixelScale }}
+            style={{
+              width: scaledWidth,
+              height: scaledHeight,
+              minWidth: 400 * pixelScale,
+              minHeight: 300 * pixelScale,
+            }}
           >
             <div className="relative w-full h-full bg-gray-100">
-              <div ref={zoomLayerRef} className="absolute inset-0" style={zoomStyle}>
+              <div
+                ref={zoomLayerRef}
+                className="absolute inset-0"
+                style={zoomStyle}
+              >
                 <AnnotationLayer
                   annotations={annotations}
                   onClick={handleCanvasClick}
@@ -648,8 +955,9 @@ export default function CanvasArea({
                 </AnnotationLayer>
               </div>
 
-              {/* 👇 Re-enable selection inside the Text overlay so users can select and edit */}
-              {selectedTool === "text" && <div className="select-text">{(textTool as any).overlay}</div>}
+              {selectedTool === "text" && (
+                <div className="select-text">{(textTool as any).overlay}</div>
+              )}
 
               {showGrid && (
                 <div

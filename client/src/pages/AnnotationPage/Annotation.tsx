@@ -162,6 +162,13 @@ export default function Annotation() {
     }
   }, []);
 
+  const removeAnnotationId = useMutation(({ storage }, id: string) => {
+  const ids = storage.get("annotationIds");
+  const index = ids.toArray().indexOf(id);
+  if (index !== -1) ids.delete(index);
+}, []);
+
+
   // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
@@ -185,6 +192,20 @@ const beginAtomicChange = useCallback(() => {
     setHistorySuspended(true);
   }
 }, [historySuspended, annotations]);
+
+const deletingIdsRef = useRef<Set<string>>(new Set());
+
+const handleRemoveAnnotationId = useCallback((id: string) => {
+  // Keep only valid mongo ids in the set (still safe to store anything)
+  const mongoId = /^[0-9a-fA-F]{24}$/.test(id) ? id : null;
+  if (mongoId) deletingIdsRef.current.add(mongoId);
+
+  // also remove locally (covers temp ids and mongo ids)
+  setAnnotations(prev =>
+    prev.filter(a => a.id !== id && (a as any)?.backendId !== id)
+  );
+}, [setAnnotations]);
+
 
 const endAtomicChange = useCallback(() => {
   if (!historySuspended) return;
@@ -442,7 +463,8 @@ const endAtomicChange = useCallback(() => {
         } as AnnotationType;
       });
       
-      setAnnotations(convertedAnnotations);
+      const filtered = convertedAnnotations.filter(a => !deletingIdsRef.current.has(a.id));
+setAnnotations(filtered);
       console.log(`Loaded ${convertedAnnotations.length} annotations`);
     } catch (error) {
       console.error("Failed to load annotations:", error);
@@ -786,6 +808,7 @@ const endAtomicChange = useCallback(() => {
     setRedoStack([]);
   };
 
+
   // Undo last change
   const handleUndo = () => {
     if (undoStack.length === 0) return;
@@ -1103,6 +1126,7 @@ const updateAnnotations = useCallback<
           showGrid={showGrid}
           beginAtomicChange={beginAtomicChange}
   endAtomicChange={endAtomicChange}
+   onRemoveAnnotationId={handleRemoveAnnotationId}
         />
         <LabelPanel
           labels={labels}

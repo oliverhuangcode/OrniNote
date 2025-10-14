@@ -48,13 +48,15 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
   const renderAnnotation = (a: Annotation) => {
     switch (a.type) {
       case "text": {
-        // Make the (rendered) text selectable via group wrapper below.
+        // Let the wrapper <g data-ann-id> handle selection;
+        // text itself can be selectable when using the Text tool.
         return <TextAnnotation key={a.id} annotation={a} />;
       }
 
       case "line": {
-        // If your <LineAnnotation> draws a <line> or <polyline>,
-        // ensure pointerEvents gets passed through (stroke hit).
+        // Ensure stroke is hittable for selection/move.
+        // If your LineAnnotation already sets pointerEvents="stroke",
+        // you can drop this wrapper <g>.
         return (
           <g key={a.id} pointerEvents="stroke" style={{ cursor: "move" }}>
             <LineAnnotation annotation={a} />
@@ -64,8 +66,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
 
       case "rectangle": {
         if (!a.properties.position) return null;
-        const rectColor =
-          a.properties.style?.color || a.properties.color || "#13ba83";
+        const rectColor = a.properties.style?.color || a.properties.color || "#13ba83";
         const rectFill = lighten(rectColor, 0.3) + "55";
         return (
           <rect
@@ -84,49 +85,42 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
       }
 
       case "path": {
-        // Wrap PathAnnotation to guarantee stroke hit-test.
-        return (
-          <g key={a.id} pointerEvents="stroke" style={{ cursor: "move" }}>
-            <PathAnnotation annotation={a} />
-          </g>
-        );
+        // IMPORTANT: render the <path> directly (no extra <g>) and
+        // rely on PathAnnotation to set pointerEvents="stroke".
+        return <PathAnnotation key={a.id} annotation={a} />;
       }
 
       case "brush": {
         if (!a.properties.points || a.properties.points.length === 0) return null;
-        const brushColor =
-          a.properties.style?.color || a.properties.color || "#13ba83";
-        const pathData = a.properties.points.reduce((path, point, index) => {
-          return index === 0
-            ? `M ${point.x} ${point.y}`
-            : `${path} L ${point.x} ${point.y}`;
+        const brushColor = a.properties.style?.color || a.properties.color || "#13ba83";
+        const d = a.properties.points.reduce((path, pt, i) => {
+          return i === 0 ? `M ${pt.x} ${pt.y}` : `${path} L ${pt.x} ${pt.y}`;
         }, "");
         return (
           <path
             key={a.id}
-            d={pathData}
+            d={d}
             fill="none"
             stroke={brushColor}
             strokeWidth={a.properties.style?.strokeWidth || 3}
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="stroke"
-            cursor="move"
+            style={{ cursor: "move" }}
+            vectorEffect="non-scaling-stroke"
           />
         );
       }
 
+      // Keep if you sometimes have polygon annotations; otherwise safe to remove.
       case "polygon": {
         if (!a.properties.points) return null;
-        const polygonColor =
-          a.properties.style?.color || a.properties.color || "#13ba83";
+        const polygonColor = a.properties.style?.color || a.properties.color || "#13ba83";
         const polygonFill = lighten(polygonColor, 0.3) + "55";
         return (
           <polygon
             key={a.id}
-            points={a.properties.points
-              .map((p: { x: number; y: number }) => `${p.x},${p.y}`)
-              .join(" ")}
+            points={a.properties.points.map((p: { x: number; y: number }) => `${p.x},${p.y}`).join(" ")}
             fill={polygonFill}
             stroke={polygonColor}
             strokeWidth={a.properties.style?.strokeWidth || 2}
@@ -156,6 +150,7 @@ const AnnotationLayer: React.FC<AnnotationLayerProps> = ({
               preserveAspectRatio="xMidYMid meet"
               onLoad={onImageLoad}
               onError={onImageError}
+              pointerEvents="none"   // << don't eat clicks/drags
             />
           ) : (
             <g>
