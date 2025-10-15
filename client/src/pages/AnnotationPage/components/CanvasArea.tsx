@@ -38,6 +38,7 @@ interface CanvasAreaProps {
   projectImage?: ActiveFile;
   onAnnotationCreated?: (annotation: Annotation) => void;
   onAnnotationUpdated?: (annotation: Annotation) => void;
+  onAnnotationDeleted?: (annotationId: string) => void;
   showGrid: boolean;
   currentLabelId?: string | null;
   currentLabelName?: string;
@@ -61,6 +62,7 @@ export default function CanvasArea({
   projectImage,
   onAnnotationCreated,
   onAnnotationUpdated,
+  onAnnotationDeleted,
   showGrid,
   currentLabelId,
   currentLabelName,
@@ -162,10 +164,15 @@ export default function CanvasArea({
       if (selectedTool === "skeleton" && e.key === "Enter" && skeletonTool.finish) {
         skeletonTool.finish();
       }
+      // Delete selected annotation with Delete or Backspace key
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedAnnotationId && onAnnotationDeleted) {
+        e.preventDefault();
+        onAnnotationDeleted(selectedAnnotationId);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedTool, penTool, skeletonTool]);
+  }, [selectedTool, penTool, skeletonTool, selectedAnnotationId, onAnnotationDeleted]);
 
   const [interaction, setInteraction] = useState<any>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);

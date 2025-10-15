@@ -171,6 +171,15 @@ export default function Annotation() {
     updates.set(annotationId, Date.now());
   }, []);
 
+  // Mutation to remove annotation ID from Liveblocks
+  const removeAnnotationId = useMutation(({ storage }, id: string) => {
+    const ids = storage.get("annotationIds");
+    const index = ids.toArray().indexOf(id);
+    if (index !== -1) {
+      ids.delete(index);
+    }
+  }, []);
+
   // Color palette state
   const colorPalette = ["#3B3B3B", "#5CBF7D"];
   const [selectedColor, setSelectedColor] = useState<string>(colorPalette[0]);
@@ -647,6 +656,28 @@ export default function Annotation() {
     }
   };
 
+  // NEW: Delete annotation from database
+  const deleteAnnotationFromDatabase = async (annotationId: string) => {
+    try {
+      if (!annotationId || annotationId.startsWith('temp-')) {
+        console.log("Skipping delete for unsaved annotation");
+        return;
+      }
+
+      await annotationService.deleteAnnotation(annotationId);
+      console.log("Annotation deleted from database:", annotationId);
+
+      // Remove from Liveblocks to notify other users
+      removeAnnotationId(annotationId);
+
+      // Update local state
+      setAnnotations((prev) => prev.filter((ann) => ann.id !== annotationId));
+      setSelectedAnnotationId(null);
+    } catch (error) {
+      console.error("Failed to delete annotation:", error);
+    }
+  };
+
   // Keep all your existing handler functions (handleAddImage, handleToolSelect, etc.)
   const handleCreateProject = async (projectData: ProjectData) => {
     try {
@@ -921,6 +952,13 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
       const isMac = navigator.platform.toUpperCase().includes("MAC");
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
+      // Delete/Backspace - delete selected annotation
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedAnnotationId) {
+        e.preventDefault();
+        deleteAnnotationFromDatabase(selectedAnnotationId);
+        return;
+      }
+
       if (modKey && e.key.toLowerCase() === "z" && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
@@ -936,7 +974,7 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undoStack, redoStack, annotations]);
+  }, [undoStack, redoStack, annotations, selectedAnnotationId]);
 
   const toolbarTools: ToolbarTool[] = [
     {
@@ -1162,6 +1200,7 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
           projectImage={activeFile}
           onAnnotationCreated={saveAnnotationToDatabase}
           onAnnotationUpdated={updateAnnotationInDatabase}
+          onAnnotationDeleted={deleteAnnotationFromDatabase}
           showGrid={showGrid}
           currentLabelId={currentLabelId}
           currentLabelName={labels.find(l => l._id === currentLabelId)?.name}
