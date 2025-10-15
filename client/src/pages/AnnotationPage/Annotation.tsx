@@ -952,18 +952,6 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
       label: "Move",
     },
     {
-      id: "marquee",
-      isSelected: selectedTool === "marquee",
-      icon: (
-        <Maximize
-          className={selectedTool === "marquee" ? "text-white" : "text-black"}
-          strokeWidth={2.5}
-          size={28}
-        />
-      ),
-      label: "Marquee",
-    },
-    {
       id: "rectangle",
       isSelected: selectedTool === "rectangle",
       icon: (
