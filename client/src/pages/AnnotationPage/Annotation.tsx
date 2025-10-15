@@ -8,7 +8,7 @@ import {
   useStorage,
   useMutation,
 } from "@liveblocks/react";
-import { LiveList } from "@liveblocks/client";
+import { LiveList, LiveObject } from "@liveblocks/client";
 import { ActiveFile, Layer, ToolbarTool, ImageData } from "./types";
 import {
   Move,
@@ -56,12 +56,13 @@ type Presence = {
   } | null;
 };
 
-// Update Liveblocks types to just store annotation IDs
+// Update Liveblocks types to store annotation update timestamps
 declare global {
   interface Liveblocks {
     Presence: Presence;
     Storage: {
       annotationIds: LiveList<string>;
+      annotationUpdates: LiveObject<Record<string, number>>; // annotationId -> timestamp
     };
     UserMeta: {};
     RoomEvent: {};
@@ -151,8 +152,9 @@ export default function Annotation() {
     string | null
   >(null);
 
-  // Liveblocks storage for syncing annotation IDs
+  // Liveblocks storage for syncing annotation IDs and updates
   const annotationIds = useStorage((root) => root.annotationIds);
+  const annotationUpdates = useStorage((root) => root.annotationUpdates);
 
   // Mutation to add annotation ID to Liveblocks
   const addAnnotationId = useMutation(({ storage }, id: string) => {
@@ -161,6 +163,12 @@ export default function Annotation() {
     if (!ids.toArray().includes(id)) {
       ids.push(id);
     }
+  }, []);
+
+  // Mutation to broadcast annotation update
+  const broadcastAnnotationUpdate = useMutation(({ storage }, annotationId: string) => {
+    const updates = storage.get("annotationUpdates");
+    updates.set(annotationId, Date.now());
   }, []);
 
   // Color palette state
@@ -198,6 +206,14 @@ export default function Annotation() {
       loadAnnotationsForImage(currentImageId);
     }
   }, [annotationIds?.length, currentImageId]);
+
+  // Watch for annotation updates from other users
+  useEffect(() => {
+    if (annotationUpdates && currentImageId) {
+      console.log("Annotation updates detected, reloading...");
+      loadAnnotationsForImage(currentImageId);
+    }
+  }, [annotationUpdates, currentImageId]);
 
   const loadProject = async () => {
     try {
@@ -558,6 +574,76 @@ export default function Annotation() {
       );
     } catch (error) {
       console.error("Failed to save annotation:", error);
+    }
+  };
+
+  // NEW: Update annotation in database
+  const updateAnnotationInDatabase = async (annotation: AnnotationType) => {
+    try {
+      if (!annotation.id || annotation.id.startsWith('temp-')) {
+        console.log("Skipping update for unsaved annotation");
+        return;
+      }
+
+      let coordinates: any;
+
+      if (annotation.type === "rectangle" && annotation.properties.position) {
+        coordinates = {
+          x: annotation.properties.position.x,
+          y: annotation.properties.position.y,
+          width: annotation.properties.width || 0,
+          height: annotation.properties.height || 0,
+        };
+      } else if (
+        annotation.type === "polygon" &&
+        annotation.properties.points
+      ) {
+        coordinates = {
+          points: annotation.properties.points.map((p: any) => [p.x, p.y]),
+        };
+      } else if (annotation.type === "line" && annotation.properties.points) {
+        coordinates = {
+          points: annotation.properties.points.map((p: any) => [p.x, p.y]),
+        };
+      } else if (
+        (annotation.type === "path" || annotation.type === "brush") &&
+        annotation.properties.points
+      ) {
+        coordinates = {
+          points: annotation.properties.points.map((p: any) => [p.x, p.y]),
+        };
+      } else if (annotation.type === "text" && annotation.properties.position) {
+        coordinates = {
+          x: annotation.properties.position.x,
+          y: annotation.properties.position.y,
+          text: annotation.properties.text || "",
+        };
+      } else if (annotation.type === "skeleton") {
+        coordinates = {
+          points: annotation.properties.skeletonPoints || [],
+          edges: annotation.properties.skeletonEdges || [],
+        };
+      } else {
+        console.warn(
+          "Unknown annotation type or missing properties:",
+          annotation
+        );
+        return;
+      }
+
+      const shapeData = {
+        type: annotation.type,
+        coordinates: coordinates,
+        isNormalised: false,
+      };
+
+      await annotationService.updateAnnotation(annotation.id, { shapeData });
+      console.log("Annotation updated in database:", annotation.id);
+
+      // Broadcast the update to other users
+      broadcastAnnotationUpdate(annotation.id);
+    } catch (error) {
+      console.error("Failed to update annotation:", error);
     }
   };
 
@@ -1075,6 +1161,7 @@ const updateAnnotations: React.Dispatch<React.SetStateAction<AnnotationType[]>> 
           setSelectedAnnotationId={setSelectedAnnotationId}
           projectImage={activeFile}
           onAnnotationCreated={saveAnnotationToDatabase}
+          onAnnotationUpdated={updateAnnotationInDatabase}
           showGrid={showGrid}
           currentLabelId={currentLabelId}
           currentLabelName={labels.find(l => l._id === currentLabelId)?.name}
@@ -1234,6 +1321,7 @@ export function AnnotationCanvas() {
         }}
         initialStorage={{
           annotationIds: new LiveList<string>([]),
+          annotationUpdates: new LiveObject<Record<string, number>>({}),
         }}
       >
         <Annotation />

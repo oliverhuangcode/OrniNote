@@ -37,6 +37,7 @@ interface CanvasAreaProps {
   selectedColor: string;
   projectImage?: ActiveFile;
   onAnnotationCreated?: (annotation: Annotation) => void;
+  onAnnotationUpdated?: (annotation: Annotation) => void;
   showGrid: boolean;
   currentLabelId?: string | null;
   currentLabelName?: string;
@@ -59,6 +60,7 @@ export default function CanvasArea({
   selectedColor,
   projectImage,
   onAnnotationCreated,
+  onAnnotationUpdated,
   showGrid,
   currentLabelId,
   currentLabelName,
@@ -314,6 +316,11 @@ export default function CanvasArea({
               } else if (cloned.type === "text" && cloned.properties.position) {
                 cloned.properties.position.x += dx;
                 cloned.properties.position.y += dy;
+              } else if (cloned.type === "brush" && cloned.properties.points) {
+                cloned.properties.points = cloned.properties.points.map((p: any) => ({
+                  x: p.x + dx,
+                  y: p.y + dy,
+                }));
               }
               return cloned;
             })
@@ -334,11 +341,18 @@ export default function CanvasArea({
       else if (selectedTool === "marquee") {
         handleMarqueeSelection(x, y);
         return;
+      } else if (selectedTool === "move" && interaction) {
+        // Save the moved annotation to database
+        const movedAnnotation = annotations.find(a => a.id === interaction.annId);
+        if (movedAnnotation && onAnnotationUpdated) {
+          console.log("Saving moved annotation:", movedAnnotation.id);
+          onAnnotationUpdated(movedAnnotation);
+        }
       }
       setIsDrawing(false);
       setInteraction(null);
     },
-    [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, handleMarqueeSelection]
+    [brushTool, isDrawing, lineTool, rectTool, selectedTool, toLocalPoint, setIsDrawing, handleMarqueeSelection, interaction, annotations, onAnnotationUpdated]
   );
 
   const renderSelectionHandles = useCallback(() => {
